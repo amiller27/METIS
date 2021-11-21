@@ -15,7 +15,9 @@
 #ifndef _TEST_PROTO_H_
 #define _TEST_PROTO_H_
 
-void ReadGraph(graph_t *, char *, idx_t *);
+#include "../programs/struct.h"
+
+graph_t* ReadGraph(params_t*);
 
 void Test_PartGraph(idx_t, idx_t *, idx_t *);
 int  VerifyPart(idx_t, idx_t *, idx_t *, idx_t *, idx_t *, idx_t, idx_t, idx_t *);

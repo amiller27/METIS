@@ -25,11 +25,16 @@ void Refine2WayNode(ctrl_t *ctrl, graph_t *orggraph, graph_t *graph)
 
   IFSET(ctrl->dbglvl, METIS_DBG_TIME, gk_startcputimer(ctrl->UncoarsenTmr));
 
+  printf("Enter\n");
   if (graph == orggraph) {
+    printf("Branch 0\n");
     Compute2WayNodePartitionParams(ctrl, graph);
   }
   else {
+    int i = 0;
     do {
+      printf("Branch 1, iter %d\n", i);
+      i++;
       graph = graph->finer;
 
       graph_ReadFromDisk(ctrl, graph);

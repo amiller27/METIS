@@ -51,10 +51,13 @@ graph_t *CoarsenGraph(ctrl_t *ctrl, graph_t *graph)
         Match_RM(ctrl, graph);
         break;
       case METIS_CTYPE_SHEM:
-        if (eqewgts || graph->nedges == 0)
+        if (eqewgts || graph->nedges == 0) {
+          printf("Match_RM\n");
           Match_RM(ctrl, graph);
-        else
+        } else {
+          printf("Match_SHEM\n");
           Match_SHEM(ctrl, graph);
+        }
         break;
       default:
         gk_errexit(SIGERR, "Unknown ctype: %d\n", ctrl->ctype);

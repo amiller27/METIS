@@ -335,7 +335,7 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
 
       /* The following check is to ensure we break out if there is a posibility
          of over-running the mind array.  */
-      if (nmind + xadj[higain+1]-xadj[higain] >= 2*nvtxs-1) 
+      if (nmind + xadj[higain+1]-xadj[higain] >= 2*nvtxs-1)
         break;
 
       if (pwgts[to]+vwgt[higain] > badmaxpwgt) 
