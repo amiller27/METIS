@@ -14,6 +14,14 @@
 
 #include "metislib.h"
 
+#define DEBUG_SEPARATOR 0
+
+#if DEBUG_SEPARATOR
+#define debug(...) printf(__VA_ARGS__)
+#else
+#define debug(...)
+#endif
+
 /*************************************************************************
 * This function takes a bisection and constructs a minimum weight vertex 
 * separator out of it. It uses the node-based separator refinement for it.
@@ -22,6 +30,12 @@ void ConstructSeparator(ctrl_t *ctrl, graph_t *graph)
 {
   idx_t i, j, k, nvtxs, nbnd;
   idx_t *xadj, *where, *bndind;
+  debug("ENTERED CONSTRUCT_SEPARATOR\n");
+  #if DEBUG_SEPARATOR
+  PrintGraph(graph);
+  PrintBoundaryInfo(graph);
+  PrintWhereIdEd(graph);
+  #endif
 
   WCOREPUSH;
 

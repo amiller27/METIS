@@ -125,6 +125,23 @@ void FreeRData(graph_t *graph);
 void FreeGraph(graph_t **graph);
 void graph_WriteToDisk(ctrl_t *ctrl, graph_t *graph);
 void graph_ReadFromDisk(ctrl_t *ctrl, graph_t *graph);
+#define _PRINT_LIST_NAME(name, list, n, on) \
+        if (on) { \
+        printf(#name ": [");\
+        for (int i = 0; i < n; i++) {\
+                printf("%ld", list[i]);\
+                if (i < n - 1) { \
+                        printf(", "); \
+                }\
+        }\
+        printf("]");\
+        }
+#define _PRINT_LIST(list, n, on) _PRINT_LIST_NAME(list, list, n, on)
+void PrintPyramid(graph_t* graph);
+void PrintGraph(graph_t* graph);
+void PrintBoundaryInfo(graph_t* graph);
+void PrintBoundaryInfoEek(graph_t* graph, idx_t nbnd);
+void PrintWhereIdEd(graph_t* graph);
 
 
 /* initpart.c */

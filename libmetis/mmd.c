@@ -21,6 +21,15 @@
 
 #include "metislib.h"
 
+#define DEBUG_MMD 0
+
+#define PRINT_LIST(...) _PRINT_LIST(__VA_ARGS__, DEBUG_MMD)
+#if DEBUG_MMD
+#define debug(...) printf(__VA_ARGS__)
+#else
+#define debug(...)
+#endif
+
 
 /*************************************************************************
 *  genmmd  -- multiple minimum external degree
@@ -72,6 +81,7 @@ void genmmd(idx_t neqns, idx_t *xadj, idx_t *adjncy, idx_t *invp, idx_t *perm,
     /* eliminate all isolated nodes. */
     nextmd = head[1];
     while (nextmd > 0) {
+      debug("nextmd: %ld\n", nextmd);
       mdeg_node = nextmd;
       nextmd = invp[mdeg_node];
       marker[mdeg_node] = maxint;
@@ -88,7 +98,34 @@ void genmmd(idx_t neqns, idx_t *xadj, idx_t *adjncy, idx_t *invp, idx_t *perm,
     mdeg = 2;
 
     /* infinite loop here ! */
+    int aaron_i = 0;
     while (1) {
+      debug("LOOP %d ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", aaron_i++);
+      debug("graph: [");
+      for (int i = 1; i <= neqns; i++) {
+        debug("[");
+        for (int j = xadj[i]; j < xadj[i + 1]; j++) {
+          debug("%ld", adjncy[j] - 1);
+          if (j < xadj[i+1] - 1) {
+            debug(", ");
+          }
+        }
+        debug("]");
+        if (i < neqns) {
+          debug(", ");
+        }
+      }
+      debug("]\n");
+      PRINT_LIST(head, neqns);
+      PRINT_LIST(invp, neqns);
+      PRINT_LIST(perm, neqns);
+      PRINT_LIST(qsize, neqns);
+      PRINT_LIST(marker, neqns);
+      debug("n_ordered_nodes: %ld\n", num);
+      debug("next_minimum_degree_node: %ld\n", nextmd);
+      debug("tag: %ld\n", tag);
+      debug("minimum_degree: %ld\n", mdeg);
+
       while (head[mdeg] <= 0) 
         mdeg++;
 
@@ -99,6 +136,7 @@ void genmmd(idx_t neqns, idx_t *xadj, idx_t *adjncy, idx_t *invp, idx_t *perm,
 
 n500:
       mdeg_node = head[mdeg];
+      debug("minimum degree start: %ld\n", mdeg);
       while (mdeg_node <= 0) {
         mdeg++;
 
@@ -106,6 +144,8 @@ n500:
           goto n900;
         mdeg_node = head[mdeg];
       };
+
+      debug("post loop: %ld\n", mdeg);
 
       /*  remove 'mdeg_node' from the degree structure. */
       nextmd = invp[mdeg_node];
@@ -127,7 +167,9 @@ n500:
             marker[i] = 0;
       };
 
+      debug("ENTER ELIMINATE\n");
       mmdelm(mdeg_node, xadj, adjncy, head, invp, perm, qsize, list, marker, maxint, tag);
+      debug("EXIT ELIMINATE\n");
 
       num += qsize[mdeg_node];
       list[mdeg_node] = ehead;
@@ -140,7 +182,9 @@ n500:
       /* minimum degree nodes elimination.            */
       if (num > neqns)  
         goto n1000;
+      debug("ENTER UPDATE\n");
       mmdupd( ehead, neqns, xadj, adjncy, delta, &mdeg, head, invp, perm, qsize, list, marker, maxint, &tag);
+      debug("EXIT UPDATE\n");
     }; /* end of -- while ( 1 ) -- */
 
 n1000:
@@ -175,9 +219,35 @@ void mmdelm(idx_t mdeg_node, idx_t *xadj, idx_t *adjncy, idx_t *head, idx_t *for
           jstop, jstart, link,
           nabor, node, npv, nqnbrs, nxnode,
           pvnode, rlmt, rloc, rnode, xqnbr;
+    debug("---------- AT START OF ELIMINATE -----------\n");
+    idx_t neqns = 18;
+    debug("minimum_degree_node: %ld\n", mdeg_node);
+    debug("graph: [");
+    for (int i = 1; i <= neqns; i++) {
+      debug("[");
+      for (int j = xadj[i]; j < xadj[i + 1]; j++) {
+        debug("%ld", adjncy[j] - 1);
+        if (j < xadj[i+1] - 1) {
+          debug(", ");
+        }
+      }
+      debug("]");
+      if (i < neqns) {
+        debug(", ");
+      }
+    }
+    debug("]\n");
+    PRINT_LIST(head, neqns);
+    PRINT_LIST(forward, neqns);
+    PRINT_LIST(backward, neqns);
+    PRINT_LIST(qsize, neqns);
+    PRINT_LIST(marker, neqns);
+    debug("tag: %ld\n", tag);
+    debug("---------- END START OF ELIMINATE -----------\n");
 
     /* find the reachable set of 'mdeg_node' and */
     /* place it in the data structure.           */
+    debug("215 Setting marker [%ld] to tag %ld\n", mdeg_node, tag);
     marker[mdeg_node] = tag;
     istart = xadj[mdeg_node];
     istop = xadj[mdeg_node+1] - 1;
@@ -188,15 +258,18 @@ void mmdelm(idx_t mdeg_node, idx_t *xadj, idx_t *adjncy, idx_t *head, idx_t *for
     element = 0;
     rloc = istart;
     rlmt = istop;
+    debug("278 Finding neighbors of %ld\n", mdeg_node);
     for ( i = istart; i <= istop; i++ ) {
         nabor = adjncy[i];
         if ( nabor == 0 ) break;
         if ( marker[nabor] < tag ) {
+           debug("230 Setting marker [%ld] to tag %ld\n", nabor, tag);
            marker[nabor] = tag;
            if ( forward[nabor] < 0 )  {
               list[nabor] = element;
               element = nabor;
            } else {
+              debug("297 Keeping neighbor %ld\n", nabor);
               adjncy[rloc] = nabor;
               rloc++;
            };
@@ -217,6 +290,7 @@ n400:
           if ( node < 0 )  goto n400;
           if ( node == 0 ) break;
           if ((marker[node]<tag)&&(forward[node]>=0)) {
+             debug("256 Setting marker [%ld] to tag %ld\n", node, tag);
              marker[node] = tag;
              /*use storage from eliminated nodes if necessary.*/
              while ( rloc >= rlmt ) {
@@ -224,13 +298,19 @@ n400:
                    rloc = xadj[link];
                    rlmt = xadj[link+1] - 1;
              };
+            debug("320 Keeping neighbor %ld\n", node);
              adjncy[rloc] = node;
              rloc++;
           };
       }; /* end of -- for ( j = jstart; -- */
       element = list[element];
     };  /* end of -- while ( element > 0 ) -- */
-    if ( rloc <= rlmt ) adjncy[rloc] = 0;
+    if ( rloc <= rlmt ) {
+      debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+      debug("310 Set adjncy %ld to 0\n", rloc);
+      debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+      adjncy[rloc] = 0;
+    }
     /* for each node in the reachable set, do the following. */
     link = mdeg_node;
 
@@ -273,6 +353,7 @@ n1100:
            /* merge 'rnode' with 'mdeg_node'. */
            qsize[mdeg_node] += qsize[rnode];
            qsize[rnode] = 0;
+           debug("313 Setting marker [%ld] to maxint %ld\n", rnode, maxint);
            marker[rnode] = maxint;
            forward[rnode] = -mdeg_node;
            backward[rnode] = -maxint;
@@ -283,7 +364,12 @@ n1100:
            backward[rnode] = 0;
            adjncy[xqnbr] = mdeg_node;
            xqnbr++;
-           if ( xqnbr <= jstop )  adjncy[xqnbr] = 0;
+           if ( xqnbr <= jstop ) {
+             debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+             debug("372 Set adjncy %ld to 0 for rnode %ld\n", xqnbr, rnode);
+             debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+              adjncy[xqnbr] = 0;
+           }
         };
       }; /* end of -- for ( i = istart; -- */
       return;
@@ -353,11 +439,22 @@ void mmdnum(idx_t neqns, idx_t *perm, idx_t *invp, idx_t *qsize)
 {
   idx_t father, nextf, node, nqsize, num, root;
 
+  debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  debug("NUMBERING\n");
+  debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  PRINT_LIST(perm, neqns);
+  PRINT_LIST(invp, neqns);
+  PRINT_LIST(qsize, neqns);
+
   for ( node = 1; node <= neqns; node++ ) {
       nqsize = qsize[node];
       if ( nqsize <= 0 ) perm[node] = invp[node];
       if ( nqsize > 0 )  perm[node] = -invp[node];
   };
+  PRINT_LIST(invp, neqns);
+  PRINT_LIST(perm, neqns);
 
   /* for each node which has been merged, do the following. */
   for ( node = 1; node <= neqns; node++ ) {
@@ -385,6 +482,9 @@ void mmdnum(idx_t neqns, idx_t *perm, idx_t *invp, idx_t *qsize)
          };
       };  /* end of -- if ( perm[node] <= 0 ) -- */
   }; /* end of -- for ( node = 1; -- */
+  debug("449 YOLOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\n");
+  PRINT_LIST(invp, neqns);
+  PRINT_LIST(perm, neqns);
 
   /* ready to compute perm. */
   for ( node = 1; node <= neqns; node++ ) {
@@ -422,6 +522,7 @@ void mmdupd(idx_t ehead, idx_t neqns, idx_t *xadj, idx_t *adjncy, idx_t delta, i
       node, q2head, qxhead;
 
       mdeg0 = *mdeg + delta;
+      debug("Set mdeg0 to mdeg %ld + delta %ld\n", *mdeg, delta);
       element = ehead;
 
 n100:
@@ -430,10 +531,14 @@ n100:
       /* for each of the newly formed element, do the following. */
       /* reset tag value if necessary.                           */
       mtag = *tag + mdeg0;
+      debug("Set mtag to tag %ld + mdeg0 %ld\n", *tag, mdeg0);
       if ( mtag >= maxint ) {
          *tag = 1;
          for ( i = 1; i <= neqns; i++ )
              if ( marker[i] < maxint ) marker[i] = 0;
+         debug("REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n");
+         int* x = NULL;
+         *x = 5;
          mtag = *tag + mdeg0;
       };
 
@@ -446,6 +551,7 @@ n100:
       deg0 = 0;
       link =element;
 
+      debug("Looking at neighbors of element %ld\n", element);
 n400:
       istart = xadj[link];
       istop = xadj[link+1] - 1;
@@ -453,18 +559,27 @@ n400:
           enode = adjncy[i];
           link = -enode;
           if ( enode < 0 )  goto n400;
-          if ( enode == 0 ) break;
+          if ( enode == 0 ) {
+            debug("break 538\n");
+            break;
+          }
           if ( qsize[enode] != 0 ) {
              deg0 += qsize[enode];
+             debug("497 Setting marker [%ld] to tag %ld\n", enode, mtag);
              marker[enode] = mtag;
 
              /*'enode' requires a degree update*/
+             debug("Checking enode %ld\n", enode);
              if ( backward[enode] == 0 ) {
+               debug("Matches\n");
                 /* place either in qxhead or q2head list. */
+                debug("forward: %ld\n", forward[enode]);
                 if ( forward[enode] != 2 ) {
+                    debug("Insert enode %ld in qx\n", enode);
                      list[enode] = qxhead;
                      qxhead = enode;
                 } else {
+                    debug("Insert enode %ld in q2\n", enode);
                      list[enode] = q2head;
                      q2head = enode;
                 };
@@ -473,12 +588,14 @@ n400:
       }; /* end of -- for ( i = istart; -- */
 
       /* for each node in q2 list, do the following. */
+      debug("ENTER q2\n");
       enode = q2head;
       iq2 = 1;
 
 n900:
       if ( enode <= 0 ) goto n1500;
       if ( backward[enode] != 0 ) goto n2200;
+        debug("enode %ld in q2\n", enode);
       (*tag)++;
       deg = deg0;
 
@@ -507,6 +624,7 @@ n1000:
                 if ( qsize[node] != 0 ) {
                      if ( marker[node] < *tag ) {
                         /* 'node' is not yet considered. */
+                        debug("549 Setting marker [%ld] to tag %ld\n", node, *tag);
                         marker[node] = *tag;
                         deg += qsize[node];
                      } else {
@@ -516,6 +634,7 @@ n1000:
                                 /* merge them into a new supernode.         */
                                 qsize[enode] += qsize[node];
                                 qsize[node] = 0;
+                                debug("559 Setting marker [%ld] to maxint %ld\n", node, maxint);
                                 marker[node] = maxint;
                                 forward[node] = -enode;
                                 backward[node] = -maxint;
@@ -532,11 +651,19 @@ n1000:
 
 n1500:
           /* for each 'enode' in the 'qx' list, do the following. */
+          debug("ENTER qx\n");
           enode = qxhead;
           iq2 = 0;
 
-n1600:    if ( enode <= 0 )  goto n2300;
-          if ( backward[enode] != 0 )  goto n2200;
+n1600:    if ( enode <= 0 ) {
+            debug("break 631, enode %ld\n", enode);
+            goto n2300;
+          }
+          if ( backward[enode] != 0 ) {
+            debug("continue 635, backward: %ld\n", backward[enode]);
+            goto n2200;
+          }
+          debug("enode %ld in qx\n", enode);
           (*tag)++;
           deg = deg0;
 
@@ -547,6 +674,7 @@ n1600:    if ( enode <= 0 )  goto n2300;
                 nabor = adjncy[i];
                 if ( nabor == 0 ) break;
                 if ( marker[nabor] < *tag ) {
+                     debug("591 Setting marker [%ld] to tag %ld\n", nabor, *tag);
                      marker[nabor] = *tag;
                      link = nabor;
                      if ( forward[nabor] >= 0 ) 
@@ -564,6 +692,7 @@ n1700:
                                 if ( node < 0 ) goto n1700;
                                 if ( node == 0 ) break;
                                 if ( marker[node] < *tag ) {
+                                    debug("609 Setting marker [%ld] to tag %ld\n", node, *tag);
                                     marker[node] = *tag;
                                     deg += qsize[node];
                                 };

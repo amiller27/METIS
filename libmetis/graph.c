@@ -10,6 +10,88 @@
 
 #include "metislib.h"
 
+void PrintPyramid(graph_t* g) {
+  graph_t* curr_g = g;
+  while (curr_g->finer != NULL) {
+    curr_g = curr_g->finer;
+  }
+
+  printf("[");
+  for (; curr_g != NULL; curr_g = curr_g->coarser) {
+    printf("CoarseGraphResult { graph: ");
+
+    PrintGraph(curr_g);
+
+    printf(", total_vertex_weights: %ld, ", *curr_g->tvwgt);
+    if (curr_g->finer != NULL) {
+      _PRINT_LIST_NAME(coarsening_map, curr_g->finer->cmap, curr_g->finer->nvtxs, 1)
+    } else {
+      _PRINT_LIST_NAME(coarsening_map, curr_g->finer->cmap, 0, 1)
+    }
+    printf(" }");
+
+    if (curr_g->coarser != NULL) {
+      printf(", ");
+    }
+  }
+  printf("]");
+}
+
+void PrintGraph(graph_t* g) {
+  printf("WeightedGraph { graph: Graph { ");
+  _PRINT_LIST_NAME(x_adjacency, g->xadj, g->nvtxs + 1, 1)
+  printf(", ");
+  _PRINT_LIST_NAME(adjacency_lists, g->adjncy, g->nedges, 1)
+  printf(" }, ");
+  _PRINT_LIST_NAME(vertex_weights, g->vwgt, g->nvtxs, 1)
+  printf(", ");
+  _PRINT_LIST_NAME(edge_weights, g->adjwgt, g->nedges, 1)
+  printf(" }");
+}
+
+void PrintBoundaryInfoEek(graph_t* g, idx_t nbnd) {
+  printf("partition_weights: [%ld, %ld, %ld]\n", g->pwgts[0], g->pwgts[1], g->pwgts[2]);
+  printf("bndind: [");
+  for (int i = 0; i < nbnd; i++) {
+    printf("%ld, ", g->bndind[i]);
+  }
+  printf("]\n");
+  printf("bndptr: [");
+  for (int i = 0; i < g->nvtxs; i++) {
+    printf("%ld, ", g->bndptr[i]);
+  }
+  printf("]\n");
+}
+
+void PrintBoundaryInfo(graph_t* g) {
+  PrintBoundaryInfoEek(g, g->nbnd);
+}
+
+void PrintWhereIdEd(graph_t* g) {
+  if (g->where != NULL) {
+    printf("where: [");
+    for (int i = 0; i < g->nvtxs; i++) {
+      printf("%ld, ", g->where[i]);
+    }
+    printf("]\n");
+  } else {
+    printf("WHERE IS NULL\n");
+  }
+  if (g->id != NULL) {
+    printf("id: [");
+    for (int i = 0; i < g->nvtxs; i++) {
+      printf("%ld, ", g->id[i]);
+    }
+    printf("]\n");
+  }
+  if (g->ed != NULL) {
+    printf("ed: [");
+    for (int i = 0; i < g->nvtxs; i++) {
+      printf("%ld, ", g->ed[i]);
+    }
+    printf("]\n");
+  }
+}
 
 /*************************************************************************/
 /*! This function sets up the graph from the user input */

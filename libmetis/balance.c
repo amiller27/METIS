@@ -16,22 +16,18 @@
 void Balance2Way(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts)
 {
   if (ComputeLoadImbalanceDiff(graph, 2, ctrl->pijbm, ctrl->ubfactors) <= 0) {
-    printf("return 1\n");
     return;
   }
 
   if (graph->ncon == 1) {
     /* return right away if the balance is OK */
     if (rabs(ntpwgts[0]*graph->tvwgt[0]-graph->pwgts[0]) < 3*graph->tvwgt[0]/graph->nvtxs) {
-      printf("return 2\n");
       return;
     }
 
     if (graph->nbnd > 0) {
-      printf("bnd2way\n");
       Bnd2WayBalance(ctrl, graph, ntpwgts);
     } else {
-      printf("general2way\n");
       General2WayBalance(ctrl, graph, ntpwgts);
     }
   }

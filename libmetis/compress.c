@@ -12,6 +12,14 @@
 
 #include "metislib.h"
 
+#define DEBUG_COMPRESS 0
+
+#if DEBUG_COMPRESS
+#define debug(...) printf(__VA_ARGS__)
+#else
+#define debug(...)
+#endif
+
 /*************************************************************************/
 /*! This function compresses a graph by merging identical vertices
     The compression should lead to at least 10% reduction. 
@@ -43,7 +51,18 @@ graph_t *CompressGraph(ctrl_t *ctrl, idx_t nvtxs, idx_t *xadj, idx_t *adjncy,
     keys[i].val = i;
   }
 
+  debug("Unsorted: ");
+  for (int i = 0; i < nvtxs; i++) {
+    debug("%ld %ld, ", keys[i].key, keys[i].val);
+  }
+  debug("\n");
+
   ikvsorti(nvtxs, keys);
+
+  for (int i = 0; i < nvtxs; i++) {
+    debug("%ld %ld, ", keys[i].key, keys[i].val);
+  }
+  debug("\n");
 
   l = cptr[0] = 0;
   for (cnvtxs=i=0; i<nvtxs; i++) {

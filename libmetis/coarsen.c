@@ -8,6 +8,17 @@
 \version\verbatim $Id: coarsen.c 20398 2016-11-22 17:17:12Z karypis $ \endverbatim
 */
 
+#define DEBUG_COARSEN 1
+
+#if DEBUG_COARSEN
+#define debug(...) printf(__VA_ARGS__)
+#define DEBUG_COARSEN_LIST(...) _PRINT_LIST_NAME(__VA_ARGS)
+#else
+#define debug(...)
+#define DEBUG_COARSEN_LIST(...)
+#endif
+
+
 
 #include "metislib.h"
 
@@ -52,10 +63,8 @@ graph_t *CoarsenGraph(ctrl_t *ctrl, graph_t *graph)
         break;
       case METIS_CTYPE_SHEM:
         if (eqewgts || graph->nedges == 0) {
-          printf("Match_RM\n");
           Match_RM(ctrl, graph);
         } else {
-          printf("Match_SHEM\n");
           Match_SHEM(ctrl, graph);
         }
         break;
@@ -830,6 +839,19 @@ void PrintCGraphStats(ctrl_t *ctrl, graph_t *graph)
 void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs, 
          idx_t *match)
 {
+  debug("CreateCoarseGraph!!!\n");
+  PrintGraph(graph);
+  debug("coarse_n: %ld\n", cnvtxs);
+  debug("matches: [");
+  for (int i = 0; i < graph->nvtxs; i++) {
+    debug("%ld, ", match[i]);
+  }
+  debug("]\n");
+  debug("coarsening_map: [");
+  for (int i = 0; i < graph->nvtxs; i++) {
+    debug("%ld, ", graph->cmap[i]);
+  }
+  debug("]\n");
   idx_t j, jj, k, kk, l, m, istart, iend, nvtxs, nedges, ncon, 
         cnedges, v, u, mask;
   idx_t *xadj, *vwgt, *vsize, *adjncy, *adjwgt;
@@ -923,6 +945,12 @@ void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs,
       for (j=istart; j<iend; j++) {
         k = cmap[adjncy[j]];
         for (kk=k&mask; htable[kk]!=-1 && cadjncy[htable[kk]]!=k; kk=((kk+1)&mask));
+        debug("hash_table: [");
+        for (int i = 0; i < mask + 1; i++) {
+          if (htable[i] < 0) continue;
+          debug("(%d, %ld), ", i, htable[i]);
+        }
+        debug("]\n");
         if ((m = htable[kk]) == -1) {
           cadjncy[nedges] = k;
           cadjwgt[nedges] = adjwgt[j];
@@ -932,6 +960,24 @@ void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs,
           cadjwgt[m] += adjwgt[j];
         }
       }
+
+      debug("ca: [");
+      for (int i = 0; i < nedges; i++) {
+        debug("%ld, ", cadjncy[i]);
+      }
+      debug("]\n");
+      debug("ca_w: [");
+      for (int i = 0; i < nedges; i++) {
+        debug("%ld, ", cadjwgt[i]);
+      }
+      debug("]\n");
+      debug("hash_table: [");
+      for (int i = 0; i < mask + 1; i++) {
+        if (htable[i] < 0) continue;
+        debug("(%d, %ld), ", i, htable[i]);
+      }
+      debug("]\n");
+  
   
       if (v != u) { 
         istart = xadj[u];
@@ -951,11 +997,16 @@ void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs,
       }
 
       /* zero out the htable */
+      debug("zeroing\n");
       for (j=0; j<nedges; j++) {
         k = cadjncy[j];
-        for (kk=k&mask; cadjncy[htable[kk]]!=k; kk=((kk+1)&mask));
+        debug("j: %ld, k: %ld\n", j, k);
+        for (kk=k&mask; cadjncy[htable[kk]]!=k; kk=((kk+1)&mask)) {
+          debug("kk: %ld, htable: %ld, cadj: %ld\n", kk, htable[kk], cadjncy[htable[kk]]);
+        }
         htable[kk] = -1;  
       }
+      debug("Zeroed\n");
 
       /* remove the contracted vertex from the list */
       cadjncy[0] = cadjncy[--nedges];
@@ -1046,7 +1097,7 @@ void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs,
     }
     SHIFTCSR(j, cnvtxs, cxadj);
 
-    //printf("droppedewgt: %d\n", (int)droppedewgt);
+    //printf("droppedewgt: %ld\n", (int)droppedewgt);
 
     cgraph->droppedewgt = droppedewgt;
   }

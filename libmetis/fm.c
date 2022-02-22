@@ -10,6 +10,14 @@
 
 #include "metislib.h"
 
+#define DEBUG_FM 0
+
+#if DEBUG_FM
+#define debug(...) printf(__VA_ARGS__)
+#else
+#define debug(...)
+#endif
+
 
 /*************************************************************************
 * This function performs an edge-based FM refinement
@@ -28,6 +36,13 @@ void FM_2WayRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter)
 /*************************************************************************/
 void FM_2WayCutRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter)
 {
+#if DEBUG_FM
+  PrintGraph(graph);
+  debug("ntpwgts: %f, %f\n", ntpwgts[0], ntpwgts[1]);
+  debug("min_cut: %ld\n", graph->mincut);
+  PrintBoundaryInfo(graph);
+  PrintWhereIdEd(graph);
+#endif
   idx_t i, ii, j, k, kwgt, nvtxs, nbnd, nswaps, from, to, pass, me, limit, tmp;
   idx_t *xadj, *vwgt, *adjncy, *adjwgt, *where, *id, *ed, *bndptr, *bndind, *pwgts;
   idx_t *moved, *swaps, *perm;
@@ -86,6 +101,27 @@ void FM_2WayCutRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter
       ASSERT(ed[bndind[i]] > 0 || id[bndind[i]] == 0);
       ASSERT(bndptr[bndind[i]] != -1);
       rpqInsert(queues[where[bndind[i]]], bndind[i], ed[bndind[i]]-id[bndind[i]]);
+    }
+
+    debug("perm: [");
+    for (int i = 0; i < nbnd; i++) {
+      debug("%ld, ", perm[i]);
+    }
+    debug("]\n");
+    for (int qi = 0; qi < 2; qi++) {
+      debug("queue %d: {\n", qi);
+      debug("nnodes: %ld\n", queues[qi]->nnodes);
+      debug("heap: [");
+      for (int i = 0; i < queues[qi]->maxnodes; i++) {
+        rkv_t* node = &queues[qi]->heap[i];
+        debug("(%f, %ld), ", node->key, node->val);
+      }
+      debug("]\n");
+      debug("locator: [");
+      for (int i = 0; i < queues[qi]->maxnodes; i++) {
+        debug("%ld, ", queues[qi]->locator[i]);
+      }
+      debug("]\n");
     }
 
     for (nswaps=0; nswaps<nvtxs; nswaps++) {
@@ -162,6 +198,7 @@ void FM_2WayCutRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter
       moved[swaps[i]] = -1;  /* reset moved array */
     for (nswaps--; nswaps>mincutorder; nswaps--) {
       higain = swaps[nswaps];
+      debug("Unrolling high_gain %ld\n", higain);
 
       to = where[higain] = (where[higain]+1)%2;
       SWAP(id[higain], ed[higain], tmp);
@@ -177,8 +214,21 @@ void FM_2WayCutRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter
         kwgt = (to == where[k] ? adjwgt[j] : -adjwgt[j]);
         INC_DEC(id[k], ed[k], kwgt);
 
-        if (bndptr[k] != -1 && ed[k] == 0)
+        if (bndptr[k] != -1 && ed[k] == 0) {
+          // debug("DELETING %ld\n", k);
+          // debug("nbnd: %ld\n", nbnd);
+          // debug("bndind: [");
+          // for (int i = 0; i < nbnd; i++) {
+          //   debug("%ld, ", bndind[i]);
+          // }
+          // debug("]\n");
+          // debug("bndptr: [");
+          // for (int i = 0; i < nbnd; i++) {
+          //   debug("%ld, ", bndptr[i]);
+          // }
+          // debug("]\n");
           BNDDelete(nbnd, bndind, bndptr, k);
+        }
         if (bndptr[k] == -1 && ed[k] > 0)
           BNDInsert(nbnd, bndind, bndptr, k);
       }

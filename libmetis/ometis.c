@@ -15,6 +15,14 @@
 
 #include "metislib.h"
 
+#define DEBUG_OMETIS 0
+
+#if DEBUG_OMETIS
+#define debug(...) printf(__VA_ARGS__)
+#else
+#define debug(...)
+#endif
+
 
 /*************************************************************************/
 /*! This function is the entry point for the multilevel nested dissection 
@@ -121,6 +129,12 @@ int METIS_NodeND(idx_t *nvtxs, idx_t *xadj, idx_t *adjncy, idx_t *vwgt,
 
   /* allocate workspace memory */
   AllocateWorkSpace(ctrl, graph);
+
+  debug("Compressed: %ld, %ld [", graph->nvtxs, graph->nedges);
+  for (int i = 0; i < graph->nedges; i++) {
+    debug("%ld, ", graph->adjncy[i]);
+  }
+  debug("]\n");
 
   /* do the nested dissection ordering  */
   if (ctrl->ccorder) 
@@ -403,6 +417,10 @@ void MlevelNodeBisectionL1(ctrl_t *ctrl, graph_t *graph, idx_t niparts)
     ctrl->CoarsenTo = 40;
 
   cgraph = CoarsenGraph(ctrl, graph);
+
+  printf("pyramid: ");
+  PrintPyramid(graph);
+  printf("\n");
 
   niparts = gk_max(1, (cgraph->nvtxs <= ctrl->CoarsenTo ? niparts/2: niparts));
   /*niparts = (cgraph->nvtxs <= ctrl->CoarsenTo ? SMALLNIPARTS : LARGENIPARTS);*/
@@ -693,6 +711,11 @@ void MMDOrder(ctrl_t *ctrl, graph_t *graph, idx_t *order, idx_t lastvtx)
     adjncy[i]--;
 
   WCOREPOP;
+  debug("ORDER: [");
+  for (int i = 0; i < 48; i++) {
+    debug("%ld, ", order[i]);
+  }
+  debug("]\n");
 }
 
 
