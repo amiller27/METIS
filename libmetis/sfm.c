@@ -18,7 +18,7 @@
 #define DEBUG_TWO_SIDED 0
 
 #if DEBUG_TWO_SIDED
-#define debug_two(...) printf(__VA_ARGS__)
+#define debug_two(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define debug_two(...)
 #endif
@@ -26,9 +26,17 @@
 #define DEBUG_ONE_SIDED 0
 
 #if DEBUG_ONE_SIDED
-#define debug_one(...) printf(__VA_ARGS__)
+#define debug_one(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define debug_one(...)
+#endif
+
+#define DEBUG_BALANCE 0
+
+#if DEBUG_BALANCE
+#define debug_bal(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define debug_bal(...)
 #endif
 
 /*************************************************************************/
@@ -366,17 +374,20 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
   idx_t badmaxpwgt, mindiff, newdiff;
   real_t mult;
 
-  debug_one("ENTERING TWO_WAY_NODE_REFINE_ONE_SIDED\n");
+  debug_one("CALLED two_way_node_refine_one_sided\n");
+
   #if DEBUG_ONE_SIDED
   PrintGraph(graph);
+  debug_one("\n");
   PrintWhereIdEd(graph);
   PrintBoundaryInfo(graph);
   #endif
-  debug_one("nrinfo: [");
-  for (int i = 0; i < graph->nvtxs; i++) {
-    debug_one("(%ld, %ld), ", graph->nrinfo[i].edegrees[0], graph->nrinfo[i].edegrees[1]);
-  }
-  debug_one("]\n");
+  // debug_one("nrinfo: [");
+  // for (int i = 0; i < graph->nvtxs; i++) {
+  //   debug_one("(%ld, %ld), ", graph->nrinfo[i].edegrees[0], graph->nrinfo[i].edegrees[1]);
+  // }
+  // debug_one("]\n");
+  debug_one("n_iterations: %ld\n", niter);
   WCOREPUSH;
 
   nvtxs  = graph->nvtxs;
@@ -408,7 +419,19 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
     to    = (to+1)%2;
     debug_one("NEW PASS %ld (%ld, %ld)\n", pass, to, other);
 
+    #if DEBUG_ONE_SIDED
+    debug_one("pre reset: ");
+    PrintPriorityQueue(queue);
+    debug_one("\n");
+    #endif
+
     rpqReset(queue);
+
+    #if DEBUG_ONE_SIDED
+    debug_one("after reset: ");
+    PrintPriorityQueue(queue);
+    debug_one("\n");
+    #endif
 
     mincutorder = -1;
     initcut = mincut = graph->mincut;
@@ -416,10 +439,26 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
 
     /* use the swaps array in place of the traditional perm array to save memory */
     irandArrayPermute(nbnd, swaps, nbnd, 1);
+    _PRINT_LIST_NAME(perm, swaps, nbnd, DEBUG_ONE_SIDED);
+    debug_one("\n");
     for (ii=0; ii<nbnd; ii++) {
       i = bndind[swaps[ii]];
       ASSERT(where[i] == 2);
+
+      #if DEBUG_ONE_SIDED
+      debug_one("pre insert: ");
+      PrintPriorityQueue(queue);
+      debug_one("\n");
+      #endif
+
+      debug_one("i: %ld, vwgt: %ld, other: %ld, deg: %ld\n", i, vwgt[i], other, rinfo[i].edegrees[other]);
       rpqInsert(queue, i, vwgt[i]-rinfo[i].edegrees[other]);
+
+      #if DEBUG_ONE_SIDED
+      debug_one("post insert: ");
+      PrintPriorityQueue(queue);
+      debug_one("\n");
+      #endif
     }
 
     ASSERT(CheckNodeBnd(graph, nbnd));
@@ -438,31 +477,31 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
       #if DEBUG_ONE_SIDED
       PrintWhereIdEd(graph);
       PrintBoundaryInfoEek(graph, nbnd);
+      PrintPriorityQueue(queue);
+      debug_one("\n");
       #endif
-      debug_one("queue\n");
-      debug_one("nnodes: %ld\n", queue->nnodes);
-      debug_one("heap: [");
-      for (int i = 0; i < queue->maxnodes; i++) {
-        rkv_t* node = &queue->heap[i];
-        debug_one("(%f, %ld), ", node->key, node->val);
-      }
-      debug_one("]\n");
-      debug_one("locator: [");
-      for (int i = 0; i < queue->maxnodes; i++) {
-        debug_one("%ld, ", queue->locator[i]);
-      }
-      debug_one("]\n");
       debug_one("to: %ld, other: %ld\n", to, other);
-      debug_one("swaps: [");
-      for (int i = 0; i < nvtxs; i++) {
-        debug_one("%ld, ", swaps[i]);
+      _PRINT_LIST(swaps, nswaps, DEBUG_ONE_SIDED)
+      debug_one("\n");
+      if (mincutorder == -1) {
+        debug_one("min_cut_order: None\n");
+      } else {
+        debug_one("min_cut_order: Some(%ld)\n", mincutorder);
       }
-      debug_one("]\n");
-      debug_one("min_cut_order: %ld\n", mincutorder);
       debug_one("min_cut: %ld\n", mincut);
-      debug_one("mptr: [");
-      for (int i = 0; i < nvtxs + 1; i++) {
-        debug_one("%ld, ", mptr[i]);
+      debug_one("m_ptr: [");
+      for (int i = 0; i < nswaps; i++) {
+        debug_one("[");
+        for (int j = mptr[i]; j < mptr[i + 1]; j++) {
+          debug_one("%ld", mind[j]);
+          if (j + 1 != mptr[i + 1]) {
+            debug_one(", ");
+          }
+        }
+        debug_one("]");
+        if (i + 1 != nswaps) {
+          debug_one(", ");
+        }
       }
       debug_one("]\n");
       debug_one("min_diff: %ld\n", mindiff);
@@ -495,7 +534,6 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
         if (nswaps - mincutorder > 3*limit || 
             (nswaps - mincutorder > limit && pwgts[2] > 1.10*mincut)) {
           pwgts[2] += (vwgt[higain]-rinfo[higain].edegrees[other]);
-          debug_one("Break 485\n");
           break; /* No further improvement, break out */
         }
       }
@@ -539,12 +577,36 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
               rinfo[kk].edegrees[other] -= vwgt[k];
 
               /* Since the moves are one-sided this vertex has not been moved yet */
+              #if DEBUG_ONE_SIDED
+              debug_one("pre update: ");
+              PrintPriorityQueue(queue);
+              debug_one("\n");
+              #endif
+
               rpqUpdate(queue, kk, vwgt[kk]-rinfo[kk].edegrees[other]); 
+
+              #if DEBUG_ONE_SIDED
+              debug_one("post update: ");
+              PrintPriorityQueue(queue);
+              debug_one("\n");
+              #endif
             }
           }
 
           /* Insert the new vertex into the priority queue. Safe due to one-sided moves */
+          #if DEBUG_ONE_SIDED
+          debug_one("pre insert 2: ");
+          PrintPriorityQueue(queue);
+          debug_one("\n");
+          #endif
+
           rpqInsert(queue, k, vwgt[k]-edegrees[other]);
+
+          #if DEBUG_ONE_SIDED
+          debug_one("post insert 2: ");
+          PrintPriorityQueue(queue);
+          debug_one("\n");
+          #endif
         }
       }
       mptr[nswaps+1] = nmind;
@@ -613,6 +675,8 @@ void FM_2WayNodeRefine1Sided(ctrl_t *ctrl, graph_t *graph, idx_t niter)
 
   rpqDestroy(queue);
 
+  debug_one("EXITED two_way_node_refine_one_sided\n");
+
   WCOREPOP;
 }
 
@@ -631,6 +695,14 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
   nrinfo_t *rinfo;
   real_t mult;
 
+  debug_bal("CALLED two_way_node_balance\n");
+  #if DEBUG_BALANCE
+  PrintGraph(graph);
+  debug_bal("\n");
+  PrintWhereIdEd(graph);
+  PrintBoundaryInfo(graph);
+  #endif
+
   nvtxs  = graph->nvtxs;
   xadj   = graph->xadj;
   adjncy = graph->adjncy;
@@ -645,10 +717,14 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
   mult = 0.5*ctrl->ubfactors[0];
 
   badmaxpwgt = (idx_t)(mult*(pwgts[0]+pwgts[1]));
-  if (gk_max(pwgts[0], pwgts[1]) < badmaxpwgt)
+  if (gk_max(pwgts[0], pwgts[1]) < badmaxpwgt) {
+    debug_bal("EARLY EXITED two_way_node_balance\n");
     return;
-  if (iabs(pwgts[0]-pwgts[1]) < 3*graph->tvwgt[0]/nvtxs)
+  }
+  if (iabs(pwgts[0]-pwgts[1]) < 3*graph->tvwgt[0]/nvtxs) {
+    debug_bal("EARLY EXITED 2 two_way_node_balance\n");
     return;
+  }
 
   WCOREPUSH;
 
@@ -669,6 +745,11 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
     i = bndind[perm[ii]];
     ASSERT(where[i] == 2);
     rpqInsert(queue, i, vwgt[i]-rinfo[i].edegrees[other]);
+    debug_bal("Inserting %ld %ld\n", i, vwgt[i]-rinfo[i].edegrees[other]);
+    #if DEBUG_BALANCE
+    PrintPriorityQueue(queue);
+    debug_bal("\n");
+    #endif
   }
 
   ASSERT(CheckNodeBnd(graph, nbnd));
@@ -678,6 +759,15 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
   * Get into the FM loop
   *******************************************************/
   for (nswaps=0; nswaps<nvtxs; nswaps++) {
+    debug_bal("SWAP %ld\n", nswaps);
+    #if DEBUG_BALANCE
+    PrintWhereIdEd(graph);
+    PrintBoundaryInfoEek(graph, nbnd);
+    PrintPriorityQueue(queue);
+    debug_bal("\n");
+    #endif
+    debug_bal("to: %ld, other: %ld\n", to, other);
+
     if ((higain = rpqGetTop(queue)) == -1)
       break;
 
@@ -715,6 +805,7 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
     ***********************************************************/
     for (j=xadj[higain]; j<xadj[higain+1]; j++) {
       k = adjncy[j];
+      debug_bal("k: %ld\n", k);
       if (where[k] == 2) { /* For the in-separator vertices modify their edegree[to] */
         rinfo[k].edegrees[to] += vwgt[higain];
       }
@@ -729,6 +820,7 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
         edegrees[0] = edegrees[1] = 0;
         for (jj=xadj[k]; jj<xadj[k+1]; jj++) {
           kk = adjncy[jj];
+          debug_bal("kk: %ld\n", kk);
           if (where[kk] != 2) 
             edegrees[where[kk]] += vwgt[kk];
           else {
@@ -740,6 +832,7 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
               rpqUpdate(queue, kk, oldgain+vwgt[k]);
           }
         }
+        debug_bal("nr_info: %ld\n", nvtxs);
 
         /* Insert the new vertex into the priority queue */
         rpqInsert(queue, k, vwgt[k]-edegrees[other]);
@@ -754,6 +847,8 @@ void FM_2WayNodeBalance(ctrl_t *ctrl, graph_t *graph)
   graph->nbnd   = nbnd;
 
   rpqDestroy(queue);
+
+  debug_bal("EXITED two_way_node_balance\n");
 
   WCOREPOP;
 }

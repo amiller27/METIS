@@ -18,7 +18,7 @@
 #define DEBUG_OMETIS 0
 
 #if DEBUG_OMETIS
-#define debug(...) printf(__VA_ARGS__)
+#define debug(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define debug(...)
 #endif
@@ -130,12 +130,6 @@ int METIS_NodeND(idx_t *nvtxs, idx_t *xadj, idx_t *adjncy, idx_t *vwgt,
   /* allocate workspace memory */
   AllocateWorkSpace(ctrl, graph);
 
-  debug("Compressed: %ld, %ld [", graph->nvtxs, graph->nedges);
-  for (int i = 0; i < graph->nedges; i++) {
-    debug("%ld, ", graph->adjncy[i]);
-  }
-  debug("]\n");
-
   /* do the nested dissection ordering  */
   if (ctrl->ccorder) 
     MlevelNestedDissectionCC(ctrl, graph, iperm, graph->nvtxs);
@@ -158,8 +152,11 @@ int METIS_NodeND(idx_t *nvtxs, idx_t *xadj, idx_t *adjncy, idx_t *vwgt,
       perm[iperm[i]] = i; 
     for (l=ii=0; ii<nnvtxs; ii++) {
       i = perm[ii];
-      for (j=cptr[i]; j<cptr[i+1]; j++)
+      debug("uncompressing i: %ld, ii: %ld\n", i, ii);
+      for (j=cptr[i]; j<cptr[i+1]; j++) {
+        debug("uncompressing j: %ld, cind: %ld\n", j, cind[j]);
         iperm[cind[j]] = l++;
+      }
     }
 
     gk_free((void **)&cptr, &cind, LTERM);
@@ -201,6 +198,12 @@ void MlevelNestedDissection(ctrl_t *ctrl, graph_t *graph, idx_t *order,
   idx_t *label, *bndind;
   graph_t *lgraph, *rgraph;
 
+  debug("CALLED m_level_nested_dissection\n");
+  #if DEBUG_OMETIS
+  PrintGraph(graph);
+  debug("\n");
+  #endif
+
   nvtxs = graph->nvtxs;
 
   MlevelNodeBisectionMultiple(ctrl, graph);
@@ -214,8 +217,11 @@ void MlevelNestedDissection(ctrl_t *ctrl, graph_t *graph, idx_t *order,
   nbnd   = graph->nbnd;
   bndind = graph->bndind;
   label  = graph->label;
-  for (i=0; i<nbnd; i++) 
+  debug("nbnd: %ld\n", nbnd);
+  for (i=0; i<nbnd; i++) {
+    debug("v: %ld, label: %ld, result: %ld\n", bndind[i], label[bndind[i]], lastvtx - 1);
     order[label[bndind[i]]] = --lastvtx;
+  }
 
   SplitGraphOrder(ctrl, graph, &lgraph, &rgraph);
 
@@ -410,6 +416,12 @@ void MlevelNodeBisectionL1(ctrl_t *ctrl, graph_t *graph, idx_t niparts)
 {
   graph_t *cgraph;
 
+  debug("CALLED m_level_node_bisection_l1\n");
+  #if DEBUG_OMETIS
+  PrintGraph(graph);
+  debug("\n");
+  #endif
+
   ctrl->CoarsenTo = graph->nvtxs/8;
   if (ctrl->CoarsenTo > 100)
     ctrl->CoarsenTo = 100;
@@ -418,15 +430,26 @@ void MlevelNodeBisectionL1(ctrl_t *ctrl, graph_t *graph, idx_t niparts)
 
   cgraph = CoarsenGraph(ctrl, graph);
 
-  printf("pyramid: ");
+  debug("pyramid: ");
+  #if DEBUG_OMETIS
   PrintPyramid(graph);
-  printf("\n");
+  #endif
+  debug("\n");
 
   niparts = gk_max(1, (cgraph->nvtxs <= ctrl->CoarsenTo ? niparts/2: niparts));
+  debug("n_i_parts: %ld\n", niparts);
   /*niparts = (cgraph->nvtxs <= ctrl->CoarsenTo ? SMALLNIPARTS : LARGENIPARTS);*/
   InitSeparator(ctrl, cgraph, niparts);
 
+  debug("separated pyramid: ");
+  #if DEBUG_OMETIS
+  PrintSeparatedPyramid(graph);
+  #endif
+  debug("\n");
+
   Refine2WayNode(ctrl, graph, cgraph);
+
+  debug("EXITED m_level_node_bisection_l1\n");
 }
 
 
@@ -711,11 +734,6 @@ void MMDOrder(ctrl_t *ctrl, graph_t *graph, idx_t *order, idx_t lastvtx)
     adjncy[i]--;
 
   WCOREPOP;
-  debug("ORDER: [");
-  for (int i = 0; i < 48; i++) {
-    debug("%ld, ", order[i]);
-  }
-  debug("]\n");
 }
 
 

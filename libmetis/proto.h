@@ -127,21 +127,23 @@ void graph_WriteToDisk(ctrl_t *ctrl, graph_t *graph);
 void graph_ReadFromDisk(ctrl_t *ctrl, graph_t *graph);
 #define _PRINT_LIST_NAME(name, list, n, on) \
         if (on) { \
-        printf(#name ": [");\
+        fprintf(stderr, #name ": [");\
         for (int i = 0; i < n; i++) {\
-                printf("%ld", list[i]);\
+                fprintf(stderr, "%ld", list[i]);\
                 if (i < n - 1) { \
-                        printf(", "); \
+                        fprintf(stderr, ", "); \
                 }\
         }\
-        printf("]");\
+        fprintf(stderr, "]");\
         }
 #define _PRINT_LIST(list, n, on) _PRINT_LIST_NAME(list, list, n, on)
 void PrintPyramid(graph_t* graph);
+void PrintSeparatedPyramid(graph_t* graph);
 void PrintGraph(graph_t* graph);
 void PrintBoundaryInfo(graph_t* graph);
 void PrintBoundaryInfoEek(graph_t* graph, idx_t nbnd);
 void PrintWhereIdEd(graph_t* graph);
+void PrintPriorityQueue(rpq_t* queue);
 
 
 /* initpart.c */
@@ -259,7 +261,7 @@ void MinCover_RowDFS(idx_t *, idx_t *, idx_t, idx_t *, idx_t *, idx_t);
 
 /* mmd.c */
 void genmmd(idx_t, idx_t *, idx_t *, idx_t *, idx_t *, idx_t , idx_t *, idx_t *, idx_t *, idx_t *, idx_t, idx_t *);
-void mmdelm(idx_t, idx_t *xadj, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t, idx_t);
+void mmdelm(idx_t, idx_t *xadj, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t, idx_t, idx_t);
 idx_t mmdint(idx_t, idx_t *xadj, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *);
 void mmdnum(idx_t, idx_t *, idx_t *, idx_t *);
 void mmdupd(idx_t, idx_t, idx_t *, idx_t *, idx_t, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t *, idx_t, idx_t *tag);

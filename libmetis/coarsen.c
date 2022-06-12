@@ -8,10 +8,10 @@
 \version\verbatim $Id: coarsen.c 20398 2016-11-22 17:17:12Z karypis $ \endverbatim
 */
 
-#define DEBUG_COARSEN 1
+#define DEBUG_COARSEN 0
 
 #if DEBUG_COARSEN
-#define debug(...) printf(__VA_ARGS__)
+#define debug(...) fprintf(stderr, __VA_ARGS__)
 #define DEBUG_COARSEN_LIST(...) _PRINT_LIST_NAME(__VA_ARGS)
 #else
 #define debug(...)
@@ -57,6 +57,11 @@ graph_t *CoarsenGraph(ctrl_t *ctrl, graph_t *graph)
       graph->cmap = imalloc(graph->nvtxs, "CoarsenGraph: graph->cmap");
 
     /* determine which matching scheme you will use */
+    debug("COMPUTING coarse_graph_result\n");
+    #if DEBUG_COARSEN
+    PrintGraph(graph);
+    debug("\n");
+    #endif
     switch (ctrl->ctype) {
       case METIS_CTYPE_RM:
         Match_RM(ctrl, graph);
@@ -87,6 +92,7 @@ graph_t *CoarsenGraph(ctrl_t *ctrl, graph_t *graph)
   IFSET(ctrl->dbglvl, METIS_DBG_COARSEN, PrintCGraphStats(ctrl, graph));
   IFSET(ctrl->dbglvl, METIS_DBG_TIME, gk_stopcputimer(ctrl->CoarsenTmr));
 
+  debug("EXITING coarsen_graph\n");
   return graph;
 }
 
@@ -174,6 +180,8 @@ idx_t Match_RM(ctrl_t *ctrl, graph_t *graph)
 
   IFSET(ctrl->dbglvl, METIS_DBG_TIME, gk_startcputimer(ctrl->MatchTmr));
 
+  debug("CALLED match_random\n");
+
   nvtxs  = graph->nvtxs;
   ncon   = graph->ncon;
   xadj   = graph->xadj;
@@ -191,7 +199,9 @@ idx_t Match_RM(ctrl_t *ctrl, graph_t *graph)
 
   /* Determine a "random" traversal order that is biased towards 
      low-degree vertices */
+  debug("Permuting %ld vertices with %ld shuffles\n", nvtxs, nvtxs/8);
   irandArrayPermute(nvtxs, tperm, nvtxs/8, 1);
+  debug("Done permuting\n");
 
   avgdegree = 4.0*(xadj[nvtxs]/nvtxs);
   for (i=0; i<nvtxs; i++) {
@@ -269,6 +279,8 @@ idx_t Match_RM(ctrl_t *ctrl, graph_t *graph)
 
   //printf("nunmatched: %zu\n", nunmatched);
 
+  debug("[LINE 184]\n");
+
   /* see if a 2-hop matching is required/allowed */
   if (!ctrl->no2hop && nunmatched > UNMATCHEDFOR2HOP*nvtxs) 
     cnvtxs = Match_2Hop(ctrl, graph, perm, match, cnvtxs, nunmatched);
@@ -314,6 +326,8 @@ idx_t Match_SHEM(ctrl_t *ctrl, graph_t *graph)
   WCOREPUSH;
 
   IFSET(ctrl->dbglvl, METIS_DBG_TIME, gk_startcputimer(ctrl->MatchTmr));
+
+  debug("CALLED match_shem\n");
 
   nvtxs  = graph->nvtxs;
   ncon   = graph->ncon;
@@ -439,6 +453,8 @@ idx_t Match_SHEM(ctrl_t *ctrl, graph_t *graph)
 
   WCOREPOP;
 
+  debug("EXITED match_shem\n");
+
   return cnvtxs;
 }
 
@@ -450,6 +466,7 @@ idx_t Match_SHEM(ctrl_t *ctrl, graph_t *graph)
 idx_t Match_2Hop(ctrl_t *ctrl, graph_t *graph, idx_t *perm, idx_t *match, 
           idx_t cnvtxs, size_t nunmatched)
 {
+  debug("CALLED match_two_hop\n");
 
   cnvtxs = Match_2HopAny(ctrl, graph, perm, match, cnvtxs, &nunmatched, 2);
   cnvtxs = Match_2HopAll(ctrl, graph, perm, match, cnvtxs, &nunmatched, 64);
@@ -457,6 +474,8 @@ idx_t Match_2Hop(ctrl_t *ctrl, graph_t *graph, idx_t *perm, idx_t *match,
     cnvtxs = Match_2HopAny(ctrl, graph, perm, match, cnvtxs, &nunmatched, 3);
   if (nunmatched > 2.0*UNMATCHEDFOR2HOP*graph->nvtxs) 
     cnvtxs = Match_2HopAny(ctrl, graph, perm, match, cnvtxs, &nunmatched, graph->nvtxs);
+
+  debug("EXITING match_two_hop\n");
 
   return cnvtxs;
 }
@@ -840,14 +859,17 @@ void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs,
          idx_t *match)
 {
   debug("CreateCoarseGraph!!!\n");
+  #if DEBUG_COARSEN
   PrintGraph(graph);
+  debug("\n");
+  #endif
   debug("coarse_n: %ld\n", cnvtxs);
   debug("matches: [");
   for (int i = 0; i < graph->nvtxs; i++) {
-    debug("%ld, ", match[i]);
+    debug("Matched(%ld), ", match[i]);
   }
   debug("]\n");
-  debug("coarsening_map: [");
+  debug("coarsening: [");
   for (int i = 0; i < graph->nvtxs; i++) {
     debug("%ld, ", graph->cmap[i]);
   }
@@ -901,6 +923,9 @@ void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs,
   cadjncy  = cgraph->adjncy;
   cadjwgt  = cgraph->adjwgt;
 
+  // for determinism
+  cadjwgt[0] = -1;
+
   htable = iset(mask+1, -1, iwspacemalloc(ctrl, mask+1));   /* hash table */
   dtable = iset(cnvtxs, -1, iwspacemalloc(ctrl, cnvtxs));   /* direct table */
 
@@ -952,23 +977,25 @@ void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs,
         }
         debug("]\n");
         if ((m = htable[kk]) == -1) {
+          debug("Adding at %ld with weight %ld\n", nedges, adjwgt[j]);
           cadjncy[nedges] = k;
           cadjwgt[nedges] = adjwgt[j];
           htable[kk] = nedges++;
         }
         else {
+          debug("Incrementing %ld (%ld) with weight %ld\n", m, cadjwgt[m], adjwgt[j]);
           cadjwgt[m] += adjwgt[j];
         }
       }
 
       debug("ca: [");
-      for (int i = 0; i < nedges; i++) {
-        debug("%ld, ", cadjncy[i]);
+      for (int i = 0; i < cnedges + nedges; i++) {
+        debug("%ld, ", cgraph->adjncy[i]);
       }
       debug("]\n");
       debug("ca_w: [");
-      for (int i = 0; i < nedges; i++) {
-        debug("%ld, ", cadjwgt[i]);
+      for (int i = 0; i < cnedges + nedges; i++) {
+        debug("%ld, ", cgraph->adjwgt[i]);
       }
       debug("]\n");
       debug("hash_table: [");
@@ -986,6 +1013,7 @@ void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs,
           k = cmap[adjncy[j]];
           for (kk=k&mask; htable[kk]!=-1 && cadjncy[htable[kk]]!=k; kk=((kk+1)&mask));
           if ((m = htable[kk]) == -1) {
+            debug("Setting last weight to %ld\n", adjwgt[j]);
             cadjncy[nedges] = k;
             cadjwgt[nedges] = adjwgt[j];
             htable[kk]      = nedges++;
@@ -1000,7 +1028,7 @@ void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs,
       debug("zeroing\n");
       for (j=0; j<nedges; j++) {
         k = cadjncy[j];
-        debug("j: %ld, k: %ld\n", j, k);
+        debug("k: %ld\n", k);
         for (kk=k&mask; cadjncy[htable[kk]]!=k; kk=((kk+1)&mask)) {
           debug("kk: %ld, htable: %ld, cadj: %ld\n", kk, htable[kk], cadjncy[htable[kk]]);
         }

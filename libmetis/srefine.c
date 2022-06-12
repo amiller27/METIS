@@ -14,6 +14,17 @@
 
 #include "metislib.h"
 
+#define DEBUG_SEPARATOR_REFINEMENT 0
+
+#if DEBUG_SEPARATOR_REFINEMENT
+#define debug(...) fprintf(stderr, __VA_ARGS__)
+#define DEBUG_SEPARATOR_REFINEMENT_LIST(...) _PRINT_LIST_NAME(__VA_ARGS__)
+#else
+#define debug(...)
+#define DEBUG_SEPARATOR_REFINEMENT_LIST(...)
+#endif
+
+
 
 /*************************************************************************/
 /*! This function is the entry point of the separator refinement. 
@@ -24,6 +35,8 @@ void Refine2WayNode(ctrl_t *ctrl, graph_t *orggraph, graph_t *graph)
 {
 
   IFSET(ctrl->dbglvl, METIS_DBG_TIME, gk_startcputimer(ctrl->UncoarsenTmr));
+  
+  debug("CALLED refine_two_way_node\n");
 
   if (graph == orggraph) {
     Compute2WayNodePartitionParams(ctrl, graph);
@@ -34,8 +47,10 @@ void Refine2WayNode(ctrl_t *ctrl, graph_t *orggraph, graph_t *graph)
       i++;
       graph = graph->finer;
 
-      printf("graph: i %d\n", i);
+      debug("graph: %d\n", i);
+      #if DEBUG_SEPARATOR_REFINEMENT
       PrintWhereIdEd(graph->coarser);
+      #endif
 
       graph_ReadFromDisk(ctrl, graph);
 
@@ -64,6 +79,8 @@ void Refine2WayNode(ctrl_t *ctrl, graph_t *orggraph, graph_t *graph)
   }
 
   IFSET(ctrl->dbglvl, METIS_DBG_TIME, gk_stopcputimer(ctrl->UncoarsenTmr));
+
+  debug("EXITED refine_two_way_node\n");
 }
 
 
@@ -147,11 +164,23 @@ void Project2WayNodePartition(ctrl_t *ctrl, graph_t *graph)
   idx_t *cmap, *where, *cwhere;
   graph_t *cgraph;
 
+  debug("CALLED project_two_way_node_partition\n");
+
   cgraph = graph->coarser;
   cwhere = cgraph->where;
 
   nvtxs = graph->nvtxs;
   cmap  = graph->cmap;
+
+  debug("graph: ");
+  #if DEBUG_SEPARATOR_REFINEMENT
+  PrintGraph(graph);
+  debug("\n");
+  #endif
+  DEBUG_SEPARATOR_REFINEMENT_LIST(coarsening_map, graph->cmap, nvtxs, DEBUG_SEPARATOR_REFINEMENT);
+  debug("\n");
+  DEBUG_SEPARATOR_REFINEMENT_LIST(coarser_graph_where, cgraph->where, cgraph->nvtxs, DEBUG_SEPARATOR_REFINEMENT);
+  debug("\n");
 
   Allocate2WayNodePartitionMemory(ctrl, graph);
   where = graph->where;
@@ -167,4 +196,6 @@ void Project2WayNodePartition(ctrl_t *ctrl, graph_t *graph)
   graph->coarser = NULL;
 
   Compute2WayNodePartitionParams(ctrl, graph);
+
+  debug("EXITED project_two_way_node_partition\n");
 }

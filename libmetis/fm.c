@@ -13,7 +13,7 @@
 #define DEBUG_FM 0
 
 #if DEBUG_FM
-#define debug(...) printf(__VA_ARGS__)
+#define debug(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define debug(...)
 #endif
@@ -37,11 +37,15 @@ void FM_2WayRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter)
 void FM_2WayCutRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter)
 {
 #if DEBUG_FM
+  debug("CALLED two_way_cut_refine\n");
   PrintGraph(graph);
-  debug("ntpwgts: %f, %f\n", ntpwgts[0], ntpwgts[1]);
-  debug("min_cut: %ld\n", graph->mincut);
-  PrintBoundaryInfo(graph);
-  PrintWhereIdEd(graph);
+  debug("\n");
+  // debug("n_t_partition_weights: %f, %f\n", ntpwgts[0], ntpwgts[1]);
+  // debug("min_cut: %ld\n", graph->mincut);
+  // PrintBoundaryInfo(graph);
+  // debug("\n");
+  // PrintWhereIdEd(graph);
+  // debug("\n");
 #endif
   idx_t i, ii, j, k, kwgt, nvtxs, nbnd, nswaps, from, to, pass, me, limit, tmp;
   idx_t *xadj, *vwgt, *adjncy, *adjwgt, *where, *id, *ed, *bndptr, *bndind, *pwgts;
@@ -103,30 +107,27 @@ void FM_2WayCutRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter
       rpqInsert(queues[where[bndind[i]]], bndind[i], ed[bndind[i]]-id[bndind[i]]);
     }
 
-    debug("perm: [");
-    for (int i = 0; i < nbnd; i++) {
-      debug("%ld, ", perm[i]);
-    }
+    #if DEBUG_FM
+    _PRINT_LIST(perm, nbnd, DEBUG_FM);
+    debug("\n");
+    debug("queues: [");
+    PrintPriorityQueue(queues[0]);
+    debug(", ");
+    PrintPriorityQueue(queues[1]);
     debug("]\n");
-    for (int qi = 0; qi < 2; qi++) {
-      debug("queue %d: {\n", qi);
-      debug("nnodes: %ld\n", queues[qi]->nnodes);
-      debug("heap: [");
-      for (int i = 0; i < queues[qi]->maxnodes; i++) {
-        rkv_t* node = &queues[qi]->heap[i];
-        debug("(%f, %ld), ", node->key, node->val);
-      }
-      debug("]\n");
-      debug("locator: [");
-      for (int i = 0; i < queues[qi]->maxnodes; i++) {
-        debug("%ld, ", queues[qi]->locator[i]);
-      }
-      debug("]\n");
-    }
+    #endif
 
     for (nswaps=0; nswaps<nvtxs; nswaps++) {
       from = (tpwgts[0]-pwgts[0] < tpwgts[1]-pwgts[1] ? 0 : 1);
       to = (from+1)%2;
+
+      #if DEBUG_FM
+      debug("swap queues: [");
+      PrintPriorityQueue(queues[0]);
+      debug(", ");
+      PrintPriorityQueue(queues[1]);
+      debug("]\n");
+      #endif
 
       if ((higain = rpqGetTop(queues[from])) == -1)
         break;
@@ -146,6 +147,8 @@ void FM_2WayCutRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter
         INC_DEC(pwgts[from], pwgts[to], vwgt[higain]);
         break;
       }
+
+      debug("Picked high_gain: %ld\n", higain);
 
       where[higain] = to;
       moved[higain] = nswaps;
@@ -168,22 +171,47 @@ void FM_2WayCutRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter
         INC_DEC(id[k], ed[k], kwgt);
 
         /* Update its boundary information and queue position */
+        debug("bndptr: %d, ed: %ld, moved: %d\n", bndptr[k] != -1, ed[k], moved[k] == -1);
         if (bndptr[k] != -1) { /* If k was a boundary vertex */
           if (ed[k] == 0) { /* Not a boundary vertex any more */
             BNDDelete(nbnd, bndind, bndptr, k);
-            if (moved[k] == -1)  /* Remove it if in the queues */
+            if (moved[k] == -1) { /* Remove it if in the queues */
               rpqDelete(queues[where[k]], k);
+              #if DEBUG_FM
+              debug("After delete %ld %ld: [", where[k], k);
+              PrintPriorityQueue(queues[0]);
+              debug(", ");
+              PrintPriorityQueue(queues[1]);
+              debug("]\n");
+              #endif
+            }
           }
           else { /* If it has not been moved, update its position in the queue */
-            if (moved[k] == -1) 
+            if (moved[k] == -1) {
               rpqUpdate(queues[where[k]], k, ed[k]-id[k]);
+              #if DEBUG_FM
+              debug("After update: [");
+              PrintPriorityQueue(queues[0]);
+              debug(", ");
+              PrintPriorityQueue(queues[1]);
+              debug("]\n");
+              #endif
+            }
           }
         }
         else {
           if (ed[k] > 0) {  /* It will now become a boundary vertex */
             BNDInsert(nbnd, bndind, bndptr, k);
-            if (moved[k] == -1) 
+            if (moved[k] == -1) {
               rpqInsert(queues[where[k]], k, ed[k]-id[k]);
+              #if DEBUG_FM
+              debug("After insert: [");
+              PrintPriorityQueue(queues[0]);
+              debug(", ");
+              PrintPriorityQueue(queues[1]);
+              debug("]\n");
+              #endif
+            }
           }
         }
       }
@@ -247,6 +275,7 @@ void FM_2WayCutRefine(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts, idx_t niter
   rpqDestroy(queues[0]);
   rpqDestroy(queues[1]);
 
+  debug("EXITED two_way_cut_refine\n");
   WCOREPOP;
 }
 

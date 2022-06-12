@@ -17,7 +17,7 @@
 #define DEBUG_SEPARATOR 0
 
 #if DEBUG_SEPARATOR
-#define debug(...) printf(__VA_ARGS__)
+#define debug(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define debug(...)
 #endif

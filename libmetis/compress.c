@@ -15,7 +15,7 @@
 #define DEBUG_COMPRESS 0
 
 #if DEBUG_COMPRESS
-#define debug(...) printf(__VA_ARGS__)
+#define debug(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define debug(...)
 #endif
@@ -38,6 +38,8 @@ graph_t *CompressGraph(ctrl_t *ctrl, idx_t nvtxs, idx_t *xadj, idx_t *adjncy,
   ikv_t *keys;
   graph_t *graph=NULL;
 
+  debug("CALLED compress_graph\n");
+
   mark = ismalloc(nvtxs, -1, "CompressGraph: mark");
   map  = ismalloc(nvtxs, -1, "CompressGraph: map");
   keys = ikvmalloc(nvtxs, "CompressGraph: keys");
@@ -51,23 +53,31 @@ graph_t *CompressGraph(ctrl_t *ctrl, idx_t nvtxs, idx_t *xadj, idx_t *adjncy,
     keys[i].val = i;
   }
 
-  debug("Unsorted: ");
+  debug("Keys unsorted: [");
   for (int i = 0; i < nvtxs; i++) {
-    debug("%ld %ld, ", keys[i].key, keys[i].val);
+    debug("KeyAndValue { key: %ld, value: %ld }", keys[i].key, keys[i].val);
+    if (i + 1 != nvtxs) {
+      debug(", ");
+    }
   }
-  debug("\n");
+  debug("]\n");
 
   ikvsorti(nvtxs, keys);
 
+  debug("Keys: [");
   for (int i = 0; i < nvtxs; i++) {
-    debug("%ld %ld, ", keys[i].key, keys[i].val);
+    debug("KeyAndValue { key: %ld, value: %ld }", keys[i].key, keys[i].val);
+    if (i + 1 != nvtxs) {
+      debug(", ");
+    }
   }
-  debug("\n");
+  debug("]\n");
 
   l = cptr[0] = 0;
   for (cnvtxs=i=0; i<nvtxs; i++) {
     ii = keys[i].val;
     if (map[ii] == -1) {
+      debug("Looking at vertex %ld\n", ii);
       mark[ii] = i;  /* Add the diagonal entry */
       for (j=xadj[ii]; j<xadj[ii+1]; j++) 
         mark[adjncy[j]] = i;
@@ -77,17 +87,23 @@ graph_t *CompressGraph(ctrl_t *ctrl, idx_t nvtxs, idx_t *xadj, idx_t *adjncy,
 
       for (j=i+1; j<nvtxs; j++) {
         iii = keys[j].val;
+        debug("Looking at vertex2 %ld\n", iii);
 
         if (keys[i].key != keys[j].key || xadj[ii+1]-xadj[ii] != xadj[iii+1]-xadj[iii])
           break; /* Break if keys or degrees are different */
 
+        debug("SELECTED\n");
+
         if (map[iii] == -1) { /* Do a comparison if iii has not been mapped */ 
+          debug("SELECTED2\n");
+
           for (jj=xadj[iii]; jj<xadj[iii+1]; jj++) {
             if (mark[adjncy[jj]] != i)
               break;
           }
 
           if (jj == xadj[iii+1]) { /* Identical adjacency structure */
+            debug("SELECTED3\n");
             map[iii]  = cnvtxs;
             cind[l++] = iii;
           }
@@ -105,6 +121,7 @@ graph_t *CompressGraph(ctrl_t *ctrl, idx_t nvtxs, idx_t *xadj, idx_t *adjncy,
   if (cnvtxs < COMPRESSION_FRACTION*nvtxs) {
     /* Sufficient compression is possible, so go ahead and create the 
        compressed graph */
+    debug("COMPRESSING\n");
 
     graph = CreateGraph();
 
@@ -113,6 +130,8 @@ graph_t *CompressGraph(ctrl_t *ctrl, idx_t nvtxs, idx_t *xadj, idx_t *adjncy,
       ii = cind[cptr[i]];
       cnedges += xadj[ii+1]-xadj[ii];
     }
+
+    debug("compressed_n_edges_bound: %ld\n", cnedges);
 
     /* Allocate memory for the compressed graph */
     cxadj   = graph->xadj   = imalloc(cnvtxs+1, "CompressGraph: xadj");
@@ -152,6 +171,8 @@ graph_t *CompressGraph(ctrl_t *ctrl, idx_t nvtxs, idx_t *xadj, idx_t *adjncy,
   }
 
   gk_free((void **)&keys, &map, &mark, LTERM);
+
+  debug("EXITED compress_graph\n");
 
   return graph;
 

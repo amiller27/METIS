@@ -10,57 +10,103 @@
 
 #include "metislib.h"
 
+#define debug(...) fprintf(stderr, __VA_ARGS__)
+
 void PrintPyramid(graph_t* g) {
   graph_t* curr_g = g;
   while (curr_g->finer != NULL) {
     curr_g = curr_g->finer;
   }
 
-  printf("[");
+  debug("[");
   for (; curr_g != NULL; curr_g = curr_g->coarser) {
-    printf("CoarseGraphResult { graph: ");
+    debug("CoarseGraphResult { graph: ");
 
     PrintGraph(curr_g);
 
-    printf(", total_vertex_weights: %ld, ", *curr_g->tvwgt);
+    debug(", total_vertex_weights: %ld, ", *curr_g->tvwgt);
     if (curr_g->finer != NULL) {
       _PRINT_LIST_NAME(coarsening_map, curr_g->finer->cmap, curr_g->finer->nvtxs, 1)
     } else {
       _PRINT_LIST_NAME(coarsening_map, curr_g->finer->cmap, 0, 1)
     }
-    printf(" }");
+    debug(" }");
 
     if (curr_g->coarser != NULL) {
-      printf(", ");
+      debug(", ");
     }
   }
-  printf("]");
+  debug("]");
+}
+
+void PrintSeparatedPyramid(graph_t* g) {
+  graph_t* curr_g = g;
+  while (curr_g->finer != NULL) {
+    curr_g = curr_g->finer;
+  }
+
+  debug("[");
+  for (; curr_g != NULL; curr_g = curr_g->coarser) {
+    debug("GraphPyramidLevel { graph: ");
+
+    PrintGraph(curr_g);
+    debug(", ");
+
+    if (curr_g->finer != NULL) {
+      _PRINT_LIST_NAME(coarsening_map, curr_g->finer->cmap, curr_g->finer->nvtxs, 1)
+    } else {
+      _PRINT_LIST_NAME(coarsening_map, curr_g->finer->cmap, 0, 1)
+    }
+    debug(", ");
+
+    if (curr_g->where != NULL) {
+      _PRINT_LIST_NAME(coarser_graph_where, curr_g->where, curr_g->nvtxs, 1)
+    } else {
+      _PRINT_LIST_NAME(coarser_graph_where, curr_g->where, 0, 1)
+    }
+    debug(", ");
+
+    debug("total_vertex_weights: %ld", *curr_g->tvwgt);
+    debug(" }");
+
+    if (curr_g->coarser != NULL) {
+      debug(", ");
+    }
+  }
+  debug("]");
 }
 
 void PrintGraph(graph_t* g) {
-  printf("WeightedGraph { graph: Graph { ");
+  debug("WeightedGraph { graph: Graph { ");
   _PRINT_LIST_NAME(x_adjacency, g->xadj, g->nvtxs + 1, 1)
-  printf(", ");
+  debug(", ");
   _PRINT_LIST_NAME(adjacency_lists, g->adjncy, g->nedges, 1)
-  printf(" }, ");
+  debug(" }, ");
   _PRINT_LIST_NAME(vertex_weights, g->vwgt, g->nvtxs, 1)
-  printf(", ");
+  debug(", ");
   _PRINT_LIST_NAME(edge_weights, g->adjwgt, g->nedges, 1)
-  printf(" }");
+  debug(" }");
 }
 
 void PrintBoundaryInfoEek(graph_t* g, idx_t nbnd) {
-  printf("partition_weights: [%ld, %ld, %ld]\n", g->pwgts[0], g->pwgts[1], g->pwgts[2]);
-  printf("bndind: [");
+  debug("partition_weights: [%ld, %ld, %ld]\n", g->pwgts[0], g->pwgts[1], g->pwgts[2]);
+  debug("boundary_ind: [");
   for (int i = 0; i < nbnd; i++) {
-    printf("%ld, ", g->bndind[i]);
+    debug("%ld, ", g->bndind[i]);
   }
-  printf("]\n");
-  printf("bndptr: [");
+  debug("]\n");
+  debug("boundary_ptr: [");
   for (int i = 0; i < g->nvtxs; i++) {
-    printf("%ld, ", g->bndptr[i]);
+    if (g->bndptr[i] == -1) {
+      debug("None");
+    } else {
+      debug("Some(%ld)", g->bndptr[i]);
+    }
+    if (i + 1 != g->nvtxs) {
+      debug(", ");
+    }
   }
-  printf("]\n");
+  debug("]\n");
 }
 
 void PrintBoundaryInfo(graph_t* g) {
@@ -69,28 +115,54 @@ void PrintBoundaryInfo(graph_t* g) {
 
 void PrintWhereIdEd(graph_t* g) {
   if (g->where != NULL) {
-    printf("where: [");
+    debug("where: [");
     for (int i = 0; i < g->nvtxs; i++) {
-      printf("%ld, ", g->where[i]);
+      debug("%ld, ", g->where[i]);
     }
-    printf("]\n");
+    debug("]\n");
   } else {
-    printf("WHERE IS NULL\n");
+    debug("WHERE IS NULL\n");
   }
   if (g->id != NULL) {
-    printf("id: [");
+    debug("id: [");
     for (int i = 0; i < g->nvtxs; i++) {
-      printf("%ld, ", g->id[i]);
+      debug("%ld, ", g->id[i]);
     }
-    printf("]\n");
+    debug("]\n");
   }
   if (g->ed != NULL) {
-    printf("ed: [");
+    debug("ed: [");
     for (int i = 0; i < g->nvtxs; i++) {
-      printf("%ld, ", g->ed[i]);
+      debug("%ld, ", g->ed[i]);
     }
-    printf("]\n");
+    debug("]\n");
   }
+}
+
+void PrintPriorityQueue(rpq_t* queue) {
+  debug("PriorityQueue { ");
+  debug("n_nodes: %ld, ", queue->nnodes);
+  debug("heap: [");
+  for (int i = 0; i < queue->maxnodes; i++) {
+    rkv_t* node = &queue->heap[i];
+    debug("Node { priority: %.1f, value: %ld }", node->key, node->val);
+    if (i + 1 != queue->maxnodes) {
+      debug(", ");
+    }
+  }
+  debug("], ");
+  debug("locator: [");
+  for (int i = 0; i < queue->maxnodes; i++) {
+    if (queue->locator[i] == -1) {
+      debug("None");
+    } else {
+      debug("Some(%ld)", queue->locator[i]);
+    }
+    if (i + 1 != queue->maxnodes) {
+      debug(", ");
+    }
+  }
+  debug("] }");
 }
 
 /*************************************************************************/

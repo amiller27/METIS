@@ -13,6 +13,15 @@
 
 #include "metislib.h"
 
+#define DEBUG_INITPART 0
+
+#if DEBUG_INITPART
+#define debug(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define debug(...)
+#endif
+
+
 /*************************************************************************/
 /*! This function computes the initial bisection of the coarsest graph */
 /*************************************************************************/
@@ -69,6 +78,8 @@ void InitSeparator(ctrl_t *ctrl, graph_t *graph, idx_t niparts)
   real_t ntpwgts[2] = {0.5, 0.5};
   mdbglvl_et dbglvl;
 
+  debug("CALLED initialize_separator\n");
+
   dbglvl = ctrl->dbglvl;
   IFSET(ctrl->dbglvl, METIS_DBG_REFINE, ctrl->dbglvl -= METIS_DBG_REFINE);
   IFSET(ctrl->dbglvl, METIS_DBG_MOVEINFO, ctrl->dbglvl -= METIS_DBG_MOVEINFO);
@@ -102,6 +113,7 @@ void InitSeparator(ctrl_t *ctrl, graph_t *graph, idx_t niparts)
 
   ctrl->dbglvl = dbglvl;
 
+  debug("EXITED initialize_separator\n");
 }
 
 
@@ -196,6 +208,9 @@ void GrowBisection(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts,
   idx_t *queue, *touched, *gain, *bestwhere;
 
   WCOREPUSH;
+
+  debug("CALLED grow_bisection\n");
+  debug("n_i_parts: %ld\n", niparts);
 
   nvtxs  = graph->nvtxs;
   xadj   = graph->xadj;
@@ -304,13 +319,17 @@ void GrowBisection(ctrl_t *ctrl, graph_t *graph, real_t *ntpwgts,
     if (inbfs == 0 || bestcut > graph->mincut) {
       bestcut = graph->mincut;
       icopy(nvtxs, where, bestwhere);
-      if (bestcut == 0)
+      if (bestcut == 0) {
+        debug("BREAKING grow_bisection\n");
         break;
+      }
     }
   }
 
   graph->mincut = bestcut;
   icopy(nvtxs, bestwhere, where);
+
+  debug("EXITED grow_bisection\n");
 
   WCOREPOP;
 }
