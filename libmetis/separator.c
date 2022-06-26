@@ -14,8 +14,6 @@
 
 #include "metislib.h"
 
-#define DEBUG_SEPARATOR 0
-
 #if DEBUG_SEPARATOR
 #define debug(...) fprintf(stderr, __VA_ARGS__)
 #else

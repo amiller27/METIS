@@ -13,8 +13,6 @@
 
 #include "metislib.h"
 
-#define DEBUG_INITPART 0
-
 #if DEBUG_INITPART
 #define debug(...) fprintf(stderr, __VA_ARGS__)
 #else

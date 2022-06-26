@@ -38,4 +38,16 @@
 #define rint(x) ((idx_t)((x)+0.5))  /* MSC does not have rint() function */
 #endif
 
+#define DEBUG_COARSEN 0
+#define DEBUG_COMPRESS 0
+#define DEBUG_FM 0
+#define DEBUG_INITPART 0
+#define DEBUG_MMD 0
+#define DEBUG_OMETIS 1
+#define DEBUG_SEPARATOR 0
+#define DEBUG_TWO_SIDED 0
+#define DEBUG_ONE_SIDED 0
+#define DEBUG_BALANCE 0
+#define DEBUG_SEPARATOR_REFINEMENT 0
+
 #endif

@@ -15,8 +15,6 @@
 
 #include "metislib.h"
 
-#define DEBUG_OMETIS 0
-
 #if DEBUG_OMETIS
 #define debug(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -322,9 +320,13 @@ void MlevelNodeBisectionMultiple(ctrl_t *ctrl, graph_t *graph)
   idx_t i, mincut;
   idx_t *bestwhere;
 
+  debug("CALLED m_level_node_bisection_multiple\n");
+
   /* if the graph is small, just find a single vertex separator */
+  debug("nseps: %ld\n", ctrl->nseps);
   if (ctrl->nseps == 1 || graph->nvtxs < (ctrl->compress ? 1000 : 2000)) {
     MlevelNodeBisectionL2(ctrl, graph, LARGENIPARTS);
+    debug("EARLY EXITED m_level_node_bisection_multiple\n");
     return;
   }
 
@@ -335,6 +337,7 @@ void MlevelNodeBisectionMultiple(ctrl_t *ctrl, graph_t *graph)
   mincut = graph->tvwgt[0];
   for (i=0; i<ctrl->nseps; i++) {
     MlevelNodeBisectionL2(ctrl, graph, LARGENIPARTS);
+    debug("min_cut: %ld\n", graph->mincut);
 
     if (i == 0 || graph->mincut < mincut) {
       mincut = graph->mincut;
@@ -354,6 +357,10 @@ void MlevelNodeBisectionMultiple(ctrl_t *ctrl, graph_t *graph)
     Compute2WayNodePartitionParams(ctrl, graph);
   }
 
+  debug("best_min_cut: %ld\n", mincut);
+
+  debug("EXITED m_level_node_bisection_multiple\n");
+
   WCOREPOP;
 }
 
@@ -368,9 +375,12 @@ void MlevelNodeBisectionL2(ctrl_t *ctrl, graph_t *graph, idx_t niparts)
   graph_t *cgraph; 
   idx_t *bestwhere;
 
+  debug("CALLED m_level_node_bisection_l2\n");
+
   /* if the graph is small, just find a single vertex separator */
   if (graph->nvtxs < 5000) {
     MlevelNodeBisectionL1(ctrl, graph, niparts);
+    debug("EARLY EXITED m_level_node_bisection_l2\n");
     return;
   }
 
@@ -406,6 +416,7 @@ void MlevelNodeBisectionL2(ctrl_t *ctrl, graph_t *graph, idx_t niparts)
 
   Refine2WayNode(ctrl, graph, cgraph);
 
+  debug("EXITED m_level_node_bisection_l2\n");
 }
 
 
@@ -448,6 +459,12 @@ void MlevelNodeBisectionL1(ctrl_t *ctrl, graph_t *graph, idx_t niparts)
   debug("\n");
 
   Refine2WayNode(ctrl, graph, cgraph);
+
+  debug("boundarized pyramid: ");
+  #if DEBUG_OMETIS
+  PrintBoundarizedPyramid(graph);
+  #endif
+  debug("\n");
 
   debug("EXITED m_level_node_bisection_l1\n");
 }

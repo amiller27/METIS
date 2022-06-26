@@ -14,8 +14,6 @@
 
 #include "metislib.h"
 
-#define DEBUG_SEPARATOR_REFINEMENT 0
-
 #if DEBUG_SEPARATOR_REFINEMENT
 #define debug(...) fprintf(stderr, __VA_ARGS__)
 #define DEBUG_SEPARATOR_REFINEMENT_LIST(...) _PRINT_LIST_NAME(__VA_ARGS__)

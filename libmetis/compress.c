@@ -12,8 +12,6 @@
 
 #include "metislib.h"
 
-#define DEBUG_COMPRESS 0
-
 #if DEBUG_COMPRESS
 #define debug(...) fprintf(stderr, __VA_ARGS__)
 #else

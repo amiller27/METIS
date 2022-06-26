@@ -139,6 +139,7 @@ void graph_ReadFromDisk(ctrl_t *ctrl, graph_t *graph);
 #define _PRINT_LIST(list, n, on) _PRINT_LIST_NAME(list, list, n, on)
 void PrintPyramid(graph_t* graph);
 void PrintSeparatedPyramid(graph_t* graph);
+void PrintBoundarizedPyramid(graph_t* graph);
 void PrintGraph(graph_t* graph);
 void PrintBoundaryInfo(graph_t* graph);
 void PrintBoundaryInfoEek(graph_t* graph, idx_t nbnd);

@@ -10,8 +10,6 @@
 
 #include "metislib.h"
 
-#define DEBUG_FM 0
-
 #if DEBUG_FM
 #define debug(...) fprintf(stderr, __VA_ARGS__)
 #else

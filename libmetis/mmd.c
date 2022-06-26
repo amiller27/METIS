@@ -21,8 +21,6 @@
 
 #include "metislib.h"
 
-#define DEBUG_MMD 0
-
 #define PRINT_LIST(...) _PRINT_LIST(__VA_ARGS__, DEBUG_MMD)
 #if DEBUG_MMD
 #define debug(...) fprintf(stderr, __VA_ARGS__)

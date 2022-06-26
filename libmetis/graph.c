@@ -76,6 +76,33 @@ void PrintSeparatedPyramid(graph_t* g) {
   debug("]");
 }
 
+void PrintBoundarizedPyramid(graph_t* g) {
+  graph_t* curr_g = g;
+  while (curr_g->finer != NULL) {
+    curr_g = curr_g->finer;
+  }
+
+  debug("[");
+  for (; curr_g != NULL; curr_g = curr_g->coarser) {
+    debug("BoundarizedGraphPyramidLevel { graph: ");
+
+    PrintGraph(curr_g);
+    debug(", ");
+
+    debug("boundary_info: BoundaryInfo { ");
+    _PRINT_LIST_NAME(_where, curr_g->where, curr_g->nvtxs, 1);
+    debug(", ");
+    PrintBoundaryInfo(curr_g);
+
+    debug(" } }");
+
+    if (curr_g->coarser != NULL) {
+      debug(", ");
+    }
+  }
+  debug("]");
+}
+
 void PrintGraph(graph_t* g) {
   debug("WeightedGraph { graph: Graph { ");
   _PRINT_LIST_NAME(x_adjacency, g->xadj, g->nvtxs + 1, 1)
@@ -89,12 +116,12 @@ void PrintGraph(graph_t* g) {
 }
 
 void PrintBoundaryInfoEek(graph_t* g, idx_t nbnd) {
-  debug("partition_weights: [%ld, %ld, %ld]\n", g->pwgts[0], g->pwgts[1], g->pwgts[2]);
+  debug("partition_weights: [%ld, %ld, %ld], ", g->pwgts[0], g->pwgts[1], g->pwgts[2]);
   debug("boundary_ind: [");
   for (int i = 0; i < nbnd; i++) {
     debug("%ld, ", g->bndind[i]);
   }
-  debug("]\n");
+  debug("], ");
   debug("boundary_ptr: [");
   for (int i = 0; i < g->nvtxs; i++) {
     if (g->bndptr[i] == -1) {
@@ -106,7 +133,7 @@ void PrintBoundaryInfoEek(graph_t* g, idx_t nbnd) {
       debug(", ");
     }
   }
-  debug("]\n");
+  debug("]");
 }
 
 void PrintBoundaryInfo(graph_t* g) {

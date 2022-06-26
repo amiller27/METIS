@@ -8,7 +8,7 @@
 \version\verbatim $Id: coarsen.c 20398 2016-11-22 17:17:12Z karypis $ \endverbatim
 */
 
-#define DEBUG_COARSEN 0
+#include "metislib.h"
 
 #if DEBUG_COARSEN
 #define debug(...) fprintf(stderr, __VA_ARGS__)
@@ -18,9 +18,20 @@
 #define DEBUG_COARSEN_LIST(...)
 #endif
 
-
-
-#include "metislib.h"
+void PrintMatches(idx_t* match, idx_t nvtxs) {
+  debug("matches: [");
+  for (int i = 0; i < nvtxs; i++) {
+    if (match[i] == UNMATCHED) {
+      debug("Unmatched");
+    } else {
+      debug("Matched(%ld)", match[i]);
+    }
+    if (i + 1 != nvtxs) {
+      debug(", ");
+    }
+  }
+  debug("]\n");
+}
 
 #define UNMATCHEDFOR2HOP  0.10  /* The fraction of unmatched vertices that triggers 2-hop */
                                   
@@ -181,6 +192,10 @@ idx_t Match_RM(ctrl_t *ctrl, graph_t *graph)
   IFSET(ctrl->dbglvl, METIS_DBG_TIME, gk_startcputimer(ctrl->MatchTmr));
 
   debug("CALLED match_random\n");
+  #if DEBUG_COARSEN
+  PrintGraph(graph);
+  debug("\n");
+  #endif
 
   nvtxs  = graph->nvtxs;
   ncon   = graph->ncon;
@@ -214,6 +229,9 @@ idx_t Match_RM(ctrl_t *ctrl, graph_t *graph)
   /* Traverse the vertices and compute the matching */
   for (cnvtxs=0, last_unmatched=0, pi=0; pi<nvtxs; pi++) {
     i = perm[pi];
+
+    debug("loop i: %ld, cnvtxs: %ld\n", i, cnvtxs);
+    PrintMatches(match, nvtxs);
 
     if (match[i] == UNMATCHED) {  /* Unmatched */
       maxidx = i;
@@ -280,6 +298,7 @@ idx_t Match_RM(ctrl_t *ctrl, graph_t *graph)
   //printf("nunmatched: %zu\n", nunmatched);
 
   debug("[LINE 184]\n");
+  PrintMatches(match, nvtxs);
 
   /* see if a 2-hop matching is required/allowed */
   if (!ctrl->no2hop && nunmatched > UNMATCHEDFOR2HOP*nvtxs) 
@@ -298,6 +317,8 @@ idx_t Match_RM(ctrl_t *ctrl, graph_t *graph)
         cmap[i] = cmap[match[i]] = cnvtxs++;
     }
   }
+
+  PrintMatches(match, nvtxs);
 
   IFSET(ctrl->dbglvl, METIS_DBG_TIME, gk_stopcputimer(ctrl->MatchTmr));
 
@@ -468,10 +489,25 @@ idx_t Match_2Hop(ctrl_t *ctrl, graph_t *graph, idx_t *perm, idx_t *match,
 {
   debug("CALLED match_two_hop\n");
 
+  debug("%d ", 393);
+  PrintMatches(match, graph->nvtxs);
+
   cnvtxs = Match_2HopAny(ctrl, graph, perm, match, cnvtxs, &nunmatched, 2);
+
+  debug("%d ", 406);
+  PrintMatches(match, graph->nvtxs);
+
   cnvtxs = Match_2HopAll(ctrl, graph, perm, match, cnvtxs, &nunmatched, 64);
+
+  debug("%d ", 419);
+  PrintMatches(match, graph->nvtxs);
+
   if (nunmatched > 1.5*UNMATCHEDFOR2HOP*graph->nvtxs) 
     cnvtxs = Match_2HopAny(ctrl, graph, perm, match, cnvtxs, &nunmatched, 3);
+
+  debug("%d ", 436);
+  PrintMatches(match, graph->nvtxs);
+
   if (nunmatched > 2.0*UNMATCHEDFOR2HOP*graph->nvtxs) 
     cnvtxs = Match_2HopAny(ctrl, graph, perm, match, cnvtxs, &nunmatched, graph->nvtxs);
 
@@ -604,6 +640,15 @@ idx_t Match_2HopAll(ctrl_t *ctrl, graph_t *graph, idx_t *perm, idx_t *match,
     }
   }
   ikvsorti(ncand, keys);
+
+  debug("keys: [");
+  for (int i = 0; i < ncand; i++) {
+    debug("KeyAndValue { key: %ld, value: %ld }", keys[i].key, keys[i].val);
+    if (i + 1 != nvtxs) {
+      debug(", ");
+    }
+  }
+  debug("]\n");
 
   mark = iset(nvtxs, 0, iwspacemalloc(ctrl, nvtxs));
   for (pi=0; pi<ncand; pi++) {
@@ -858,7 +903,7 @@ void PrintCGraphStats(ctrl_t *ctrl, graph_t *graph)
 void CreateCoarseGraph(ctrl_t *ctrl, graph_t *graph, idx_t cnvtxs, 
          idx_t *match)
 {
-  debug("CreateCoarseGraph!!!\n");
+  debug("CALLED create_coarse_graph\n");
   #if DEBUG_COARSEN
   PrintGraph(graph);
   debug("\n");

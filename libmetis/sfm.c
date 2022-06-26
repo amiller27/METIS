@@ -14,24 +14,17 @@
 
 #include "metislib.h"
 
-
-#define DEBUG_TWO_SIDED 0
-
 #if DEBUG_TWO_SIDED
 #define debug_two(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define debug_two(...)
 #endif
 
-#define DEBUG_ONE_SIDED 0
-
 #if DEBUG_ONE_SIDED
 #define debug_one(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define debug_one(...)
 #endif
-
-#define DEBUG_BALANCE 0
 
 #if DEBUG_BALANCE
 #define debug_bal(...) fprintf(stderr, __VA_ARGS__)
