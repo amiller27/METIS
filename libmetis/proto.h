@@ -125,16 +125,17 @@ void FreeRData(graph_t *graph);
 void FreeGraph(graph_t **graph);
 void graph_WriteToDisk(ctrl_t *ctrl, graph_t *graph);
 void graph_ReadFromDisk(ctrl_t *ctrl, graph_t *graph);
+#define __metis_debug(...) fprintf(__metis_logfile, __VA_ARGS__)
 #define _PRINT_LIST_NAME(name, list, n, on) \
         if (on) { \
-        fprintf(stderr, #name ": [");\
+        __metis_debug(#name ": [");\
         for (int i = 0; i < n; i++) {\
-                fprintf(stderr, "%ld", list[i]);\
+                __metis_debug("%ld", list[i]);\
                 if (i < n - 1) { \
-                        fprintf(stderr, ", "); \
+                        __metis_debug(", "); \
                 }\
         }\
-        fprintf(stderr, "]");\
+        __metis_debug("]");\
         }
 #define _PRINT_LIST(list, n, on) _PRINT_LIST_NAME(list, list, n, on)
 void PrintPyramid(graph_t* graph);
@@ -143,6 +144,7 @@ void PrintBoundarizedPyramid(graph_t* graph);
 void PrintGraph(graph_t* graph);
 void PrintBoundaryInfo(graph_t* graph);
 void PrintBoundaryInfoEek(graph_t* graph, idx_t nbnd);
+void PrintNodeBoundaryInfo(graph_t* graph, idx_t nbnd);
 void PrintWhereIdEd(graph_t* graph);
 void PrintPriorityQueue(rpq_t* queue);
 

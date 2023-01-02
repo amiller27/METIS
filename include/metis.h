@@ -354,5 +354,6 @@ typedef enum {
 } mobjtype_et;
 
 
+extern FILE* __metis_logfile;
 
 #endif  /* _METIS_H_ */

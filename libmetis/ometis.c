@@ -16,7 +16,7 @@
 #include "metislib.h"
 
 #if DEBUG_OMETIS
-#define debug(...) fprintf(stderr, __VA_ARGS__)
+#define debug(...) __metis_debug(__VA_ARGS__)
 #else
 #define debug(...)
 #endif
@@ -753,6 +753,7 @@ void MMDOrder(ctrl_t *ctrl, graph_t *graph, idx_t *order, idx_t lastvtx)
   WCOREPOP;
 }
 
+FILE* __metis_logfile;
 
 
 

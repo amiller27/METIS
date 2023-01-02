@@ -15,7 +15,7 @@
 #include "metislib.h"
 
 #if DEBUG_SEPARATOR
-#define debug(...) fprintf(stderr, __VA_ARGS__)
+#define debug(...) __metis_debug(__VA_ARGS__)
 #else
 #define debug(...)
 #endif
@@ -30,9 +30,13 @@ void ConstructSeparator(ctrl_t *ctrl, graph_t *graph)
   idx_t *xadj, *where, *bndind;
   debug("ENTERED CONSTRUCT_SEPARATOR\n");
   #if DEBUG_SEPARATOR
+  debug("graph: ");
   PrintGraph(graph);
+  debug("\n");
   PrintBoundaryInfo(graph);
+  debug("\n");
   PrintWhereIdEd(graph);
+  debug("\n");
   #endif
 
   WCOREPUSH;
@@ -60,6 +64,7 @@ void ConstructSeparator(ctrl_t *ctrl, graph_t *graph)
 
   ASSERT(IsSeparable(graph));
 
+  debug("poopy\n");
   Compute2WayNodePartitionParams(ctrl, graph);
 
   ASSERT(CheckNodePartitionParams(graph));

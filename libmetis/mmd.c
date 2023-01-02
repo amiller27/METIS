@@ -23,7 +23,7 @@
 
 #define PRINT_LIST(...) _PRINT_LIST(__VA_ARGS__, DEBUG_MMD)
 #if DEBUG_MMD
-#define debug(...) fprintf(stderr, __VA_ARGS__)
+#define debug(...) __metis_debug(__VA_ARGS__)
 #else
 #define debug(...)
 #endif
@@ -130,6 +130,7 @@ void genmmd(idx_t neqns, idx_t *xadj, idx_t *adjncy, idx_t *invp, idx_t *perm,
 
     debug("HERE BE DRAGONS\n");
     debug("THIS IS NOT A PLACE OF HONOR\n");
+    debug("neqns: %ld\n", neqns);
 
     if (neqns <= 0)  
       return;

@@ -38,6 +38,7 @@
 #define rint(x) ((idx_t)((x)+0.5))  /* MSC does not have rint() function */
 #endif
 
+extern FILE* __metis_logfile;
 #define DEBUG_COARSEN 0
 #define DEBUG_COMPRESS 0
 #define DEBUG_FM 0

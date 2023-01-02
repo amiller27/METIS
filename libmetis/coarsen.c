@@ -11,8 +11,8 @@
 #include "metislib.h"
 
 #if DEBUG_COARSEN
-#define debug(...) fprintf(stderr, __VA_ARGS__)
-#define DEBUG_COARSEN_LIST(...) _PRINT_LIST_NAME(__VA_ARGS)
+#define debug(...) __metis_debug(__VA_ARGS__)
+#define DEBUG_COARSEN_LIST(...) _PRINT_LIST_NAME(__VA_ARGS__)
 #else
 #define debug(...)
 #define DEBUG_COARSEN_LIST(...)

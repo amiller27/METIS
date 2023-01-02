@@ -10,7 +10,7 @@
 
 #include "metislib.h"
 
-#define debug(...) fprintf(stderr, __VA_ARGS__)
+#define debug(...) __metis_debug(__VA_ARGS__)
 
 void PrintPyramid(graph_t* g) {
   graph_t* curr_g = g;
@@ -116,6 +116,45 @@ void PrintGraph(graph_t* g) {
 }
 
 void PrintBoundaryInfoEek(graph_t* g, idx_t nbnd) {
+  debug("BoundaryInfo { ");
+  // this is wrong, pwgts is sometimes length 3.  I have no idea how to tell
+  // from here if that's the case though...
+  debug("partition_weights: [%ld, %ld], ", g->pwgts[0], g->pwgts[1]);
+  debug("boundary_ind: [");
+  for (int i = 0; i < nbnd; i++) {
+    debug("%ld, ", g->bndind[i]);
+  }
+  debug("], ");
+  debug("boundary_ptr: [");
+  for (int i = 0; i < g->nvtxs; i++) {
+    if (g->bndptr[i] == -1) {
+      debug("None");
+    } else {
+      debug("Some(%ld)", g->bndptr[i]);
+    }
+    if (i + 1 != g->nvtxs) {
+      debug(", ");
+    }
+  }
+  debug("]");
+  debug(" }");
+}
+
+void PrintBoundaryInfo(graph_t* g) {
+  PrintBoundaryInfoEek(g, g->nbnd);
+}
+
+void PrintNodeBoundaryInfo(graph_t* g, idx_t nbnd) {
+  debug("BoundaryInfo { ");
+  if (g->where != NULL) {
+    debug("_where: [");
+    for (int i = 0; i < g->nvtxs; i++) {
+      debug("%ld, ", g->where[i]);
+    }
+    debug("], ");
+  } else {
+    debug("WHERE IS NULL\n");
+  }
   debug("partition_weights: [%ld, %ld, %ld], ", g->pwgts[0], g->pwgts[1], g->pwgts[2]);
   debug("boundary_ind: [");
   for (int i = 0; i < nbnd; i++) {
@@ -134,19 +173,17 @@ void PrintBoundaryInfoEek(graph_t* g, idx_t nbnd) {
     }
   }
   debug("]");
-}
-
-void PrintBoundaryInfo(graph_t* g) {
-  PrintBoundaryInfoEek(g, g->nbnd);
+  debug(" }");
 }
 
 void PrintWhereIdEd(graph_t* g) {
+  debug("WhereIdEd { ");
   if (g->where != NULL) {
-    debug("where: [");
+    debug("_where: [");
     for (int i = 0; i < g->nvtxs; i++) {
       debug("%ld, ", g->where[i]);
     }
-    debug("]\n");
+    debug("], ");
   } else {
     debug("WHERE IS NULL\n");
   }
@@ -155,25 +192,26 @@ void PrintWhereIdEd(graph_t* g) {
     for (int i = 0; i < g->nvtxs; i++) {
       debug("%ld, ", g->id[i]);
     }
-    debug("]\n");
+    debug("], ");
   }
   if (g->ed != NULL) {
     debug("ed: [");
     for (int i = 0; i < g->nvtxs; i++) {
       debug("%ld, ", g->ed[i]);
     }
-    debug("]\n");
+    debug("]");
   }
+  debug(" }");
 }
 
 void PrintPriorityQueue(rpq_t* queue) {
   debug("PriorityQueue { ");
   debug("n_nodes: %ld, ", queue->nnodes);
   debug("heap: [");
-  for (int i = 0; i < queue->maxnodes; i++) {
+  for (int i = 0; i < queue->nnodes; i++) {
     rkv_t* node = &queue->heap[i];
     debug("Node { priority: %.1f, value: %ld }", node->key, node->val);
-    if (i + 1 != queue->maxnodes) {
+    if (i + 1 != queue->nnodes) {
       debug(", ");
     }
   }

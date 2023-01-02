@@ -15,7 +15,7 @@
 #include "metislib.h"
 
 #if DEBUG_SEPARATOR_REFINEMENT
-#define debug(...) fprintf(stderr, __VA_ARGS__)
+#define debug(...) __metis_debug(__VA_ARGS__)
 #define DEBUG_SEPARATOR_REFINEMENT_LIST(...) _PRINT_LIST_NAME(__VA_ARGS__)
 #else
 #define debug(...)
@@ -46,9 +46,8 @@ void Refine2WayNode(ctrl_t *ctrl, graph_t *orggraph, graph_t *graph)
       graph = graph->finer;
 
       debug("graph: %d\n", i);
-      #if DEBUG_SEPARATOR_REFINEMENT
-      PrintWhereIdEd(graph->coarser);
-      #endif
+      _PRINT_LIST_NAME(where, graph->coarser->where, graph->coarser->nvtxs, DEBUG_SEPARATOR_REFINEMENT);
+      debug("\n");
 
       graph_ReadFromDisk(ctrl, graph);
 
@@ -121,6 +120,7 @@ void Compute2WayNodePartitionParams(ctrl_t *ctrl, graph_t *graph)
   bndind = graph->bndind;
   bndptr = iset(nvtxs, -1, graph->bndptr);
 
+  debug("CALLED compute_two_way_node_partition_params\n");
 
   /*------------------------------------------------------------
   / Compute now the separator external degrees
@@ -150,6 +150,8 @@ void Compute2WayNodePartitionParams(ctrl_t *ctrl, graph_t *graph)
 
   graph->mincut = pwgts[2];
   graph->nbnd   = nbnd;
+
+  debug("EXITED compute_two_way_node_partition_params\n");
 }
 
 
@@ -193,6 +195,7 @@ void Project2WayNodePartition(ctrl_t *ctrl, graph_t *graph)
   FreeGraph(&graph->coarser);
   graph->coarser = NULL;
 
+  debug("poopy2\n");
   Compute2WayNodePartitionParams(ctrl, graph);
 
   debug("EXITED project_two_way_node_partition\n");
